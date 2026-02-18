@@ -3,27 +3,36 @@ const db = require("../config/db");
 // Get all customers
 async function getAllCustomers(req, res) {
   try {
-    const { search, page = 1, limit = 20 } = req.query;
+    const { search, page = 1, limit = 10 } = req.query;
 
     let query = `
       SELECT 
         c.*,
-        COUNT(o.id) as total_orders,
-        COALESCE(SUM(CASE WHEN o.payment_status = 'paid' THEN o.amount ELSE 0 END), 0) as total_spent
+        COUNT(DISTINCT o.id) as total_orders,
+        COALESCE(SUM(CASE WHEN o.payment_status = 'paid' THEN o.total_amount ELSE 0 END), 0) as total_spent
       FROM customers c
       LEFT JOIN orders o ON c.id = o.customer_id
+      WHERE 1=1
     `;
 
     const params = [];
 
-    // Search by name, phone, or email
+    // Search filter
     if (search) {
-      query += ` WHERE (c.name LIKE ? OR c.phone LIKE ? OR c.email LIKE ?)`;
-      const searchPattern = `%${search}%`;
-      params.push(searchPattern, searchPattern, searchPattern);
+      query += ` AND (
+        c.name LIKE ? OR 
+        c.phone LIKE ? OR 
+        c.email LIKE ?
+      )`;
+      const searchTerm = `%${search}%`;
+      params.push(searchTerm, searchTerm, searchTerm);
     }
 
-    query += ` GROUP BY c.id ORDER BY c.created_at DESC`;
+    // Group by customer
+    query += ` GROUP BY c.id`;
+
+    // Order by
+    query += ` ORDER BY c.created_at DESC`;
 
     // Pagination
     const offset = (page - 1) * limit;
@@ -33,13 +42,21 @@ async function getAllCustomers(req, res) {
     const [rows] = await db.query(query, params);
 
     // Get total count
-    let countQuery = "SELECT COUNT(*) as total FROM customers";
+    let countQuery = `
+      SELECT COUNT(DISTINCT c.id) as total 
+      FROM customers c
+      WHERE 1=1
+    `;
     const countParams = [];
 
     if (search) {
-      countQuery += ` WHERE (name LIKE ? OR phone LIKE ? OR email LIKE ?)`;
-      const searchPattern = `%${search}%`;
-      countParams.push(searchPattern, searchPattern, searchPattern);
+      countQuery += ` AND (
+        c.name LIKE ? OR 
+        c.phone LIKE ? OR 
+        c.email LIKE ?
+      )`;
+      const searchTerm = `%${search}%`;
+      countParams.push(searchTerm, searchTerm, searchTerm);
     }
 
     const [countResult] = await db.query(countQuery, countParams);
