@@ -11,7 +11,6 @@ async function getAllOrders(req, res) {
       date_from,
       date_to,
       customer_id,
-      service_id,
       page = 1,
       limit = 20,
     } = req.query;
@@ -22,10 +21,11 @@ async function getAllOrders(req, res) {
         c.name as customer_name,
         c.phone as customer_phone,
         c.email as customer_email,
-        s.name as service_name
+        GROUP_CONCAT(DISTINCT os.service_name SEPARATOR ', ') as services_names,
+        COUNT(DISTINCT os.id) as services_count
       FROM orders o
       JOIN customers c ON o.customer_id = c.id
-      JOIN services s ON o.service_id = s.id
+      LEFT JOIN order_services os ON o.id = os.order_id
       WHERE 1=1
     `;
 
@@ -57,11 +57,7 @@ async function getAllOrders(req, res) {
       params.push(customer_id);
     }
 
-    if (service_id) {
-      query += ` AND o.service_id = ?`;
-      params.push(service_id);
-    }
-
+    query += ` GROUP BY o.id`;
     query += ` ORDER BY o.created_at DESC`;
 
     // Pagination
@@ -73,7 +69,7 @@ async function getAllOrders(req, res) {
 
     // Get total count
     let countQuery = `
-      SELECT COUNT(*) as total 
+      SELECT COUNT(DISTINCT o.id) as total 
       FROM orders o
       WHERE 1=1
     `;
@@ -98,10 +94,6 @@ async function getAllOrders(req, res) {
     if (customer_id) {
       countQuery += ` AND o.customer_id = ?`;
       countParams.push(customer_id);
-    }
-    if (service_id) {
-      countQuery += ` AND o.service_id = ?`;
-      countParams.push(service_id);
     }
 
     const [countResult] = await db.query(countQuery, countParams);
@@ -133,7 +125,7 @@ async function getOrderById(req, res) {
   try {
     const { id } = req.params;
 
-    // Get order with customer and service details
+    // Get order with customer details
     const [orders] = await db.query(
       `
       SELECT 
@@ -141,13 +133,9 @@ async function getOrderById(req, res) {
         c.name as customer_name,
         c.phone as customer_phone,
         c.email as customer_email,
-        c.address as customer_address,
-        s.name as service_name,
-        s.price as service_price,
-        s.duration_minutes as service_duration
+        c.address as customer_address
       FROM orders o
       JOIN customers c ON o.customer_id = c.id
-      JOIN services s ON o.service_id = s.id
       WHERE o.id = ?
     `,
       [id],
@@ -165,6 +153,16 @@ async function getOrderById(req, res) {
 
     const order = orders[0];
 
+    // Get order services
+    const [services] = await db.query(
+      `
+      SELECT * FROM order_services
+      WHERE order_id = ?
+      ORDER BY id
+    `,
+      [id],
+    );
+
     // Get reschedule history
     const [rescheduleHistory] = await db.query(
       `
@@ -179,6 +177,7 @@ async function getOrderById(req, res) {
       success: true,
       data: {
         ...order,
+        services: services,
         reschedule_history: rescheduleHistory,
       },
     });
@@ -203,16 +202,14 @@ async function getOrderByOrderNumber(req, res) {
       `
       SELECT 
         o.order_number,
-        o.amount,
+        o.total_amount,
         o.payment_status,
         o.payment_link,
         o.service_date,
         o.service_start_time,
-        c.name as customer_name,
-        s.name as service_name
+        c.name as customer_name
       FROM orders o
       JOIN customers c ON o.customer_id = c.id
-      JOIN services s ON o.service_id = s.id
       WHERE o.order_number = ?
     `,
       [order_number],
@@ -228,9 +225,20 @@ async function getOrderByOrderNumber(req, res) {
       });
     }
 
+    const order = orders[0];
+
+    // Get services
+    const [services] = await db.query(
+      `SELECT service_name, quantity, subtotal FROM order_services WHERE order_id = (SELECT id FROM orders WHERE order_number = ?)`,
+      [order_number],
+    );
+
     res.json({
       success: true,
-      data: orders[0],
+      data: {
+        ...order,
+        services: services,
+      },
     });
   } catch (error) {
     console.error("Get order by number error:", error);
@@ -252,49 +260,71 @@ async function createOrder(req, res) {
       customer_phone,
       customer_email,
       customer_address,
-      service_id,
+      services, // ← Array of services
       service_date,
       service_start_time,
-      service_notes,
-      amount,
+      notes,
     } = req.body;
 
     // Validation
     if (
       !customer_name ||
       !customer_phone ||
-      !service_id ||
+      !services ||
+      services.length === 0 ||
       !service_date ||
-      !service_start_time ||
-      !amount
+      !service_start_time
     ) {
       return res.status(400).json({
         success: false,
         error: {
           code: "VALIDATION_ERROR",
           message:
-            "Customer name, phone, service, date, time, and amount are required",
+            "Customer name, phone, services, date, and time are required",
         },
       });
     }
 
-    // Get service details
-    const [services] = await db.query(
-      "SELECT * FROM services WHERE id = ? AND is_active = 1",
-      [service_id],
-    );
+    // Get service details & calculate totals
+    let total_amount = 0;
+    let total_duration = 0;
+    const serviceDetails = [];
 
-    if (services.length === 0) {
-      return res.status(404).json({
-        success: false,
-        error: {
-          code: "SERVICE_NOT_FOUND",
-          message: "Service not found or inactive",
-        },
+    for (const svc of services) {
+      const [dbServices] = await db.query(
+        "SELECT * FROM services WHERE id = ? AND is_active = 1",
+        [svc.service_id],
+      );
+
+      if (dbServices.length === 0) {
+        return res.status(404).json({
+          success: false,
+          error: {
+            code: "SERVICE_NOT_FOUND",
+            message: `Service ID ${svc.service_id} not found or inactive`,
+          },
+        });
+      }
+
+      const service = dbServices[0];
+      const quantity = svc.quantity || 1;
+
+      // Use custom price if provided, otherwise use service price
+      const price = svc.custom_price || service.price;
+      const subtotal = price * quantity;
+
+      total_amount += subtotal;
+      total_duration += service.duration_minutes * quantity;
+
+      serviceDetails.push({
+        service_id: service.id,
+        service_name: service.name,
+        price: price,
+        duration_minutes: service.duration_minutes,
+        quantity,
+        subtotal,
       });
     }
-
-    const service = services[0];
 
     // Check schedule conflict
     const [conflicts] = await db.query(
@@ -303,7 +333,7 @@ async function createOrder(req, res) {
         o.id,
         o.order_number,
         o.service_start_time,
-        o.service_duration_minutes,
+        o.total_duration_minutes,
         c.name as customer_name
       FROM orders o
       JOIN customers c ON o.customer_id = c.id
@@ -311,7 +341,7 @@ async function createOrder(req, res) {
         AND o.status NOT IN ('cancelled', 'refunded')
         AND (
           (o.service_start_time <= ? AND 
-           ADDTIME(o.service_start_time, SEC_TO_TIME(o.service_duration_minutes * 60)) > ?)
+           ADDTIME(o.service_start_time, SEC_TO_TIME(o.total_duration_minutes * 60)) > ?)
           OR
           (o.service_start_time < ADDTIME(?, SEC_TO_TIME(? * 60)) AND
            o.service_start_time >= ?)
@@ -322,7 +352,7 @@ async function createOrder(req, res) {
         service_start_time,
         service_start_time,
         service_start_time,
-        service.duration_minutes,
+        total_duration,
         service_start_time,
       ],
     );
@@ -350,10 +380,7 @@ async function createOrder(req, res) {
     );
 
     if (existingCustomers.length > 0) {
-      // Customer exists
       customer_id = existingCustomers[0].id;
-
-      // Update customer info
       await db.query(
         "UPDATE customers SET name = ?, email = ?, address = ? WHERE id = ?",
         [
@@ -364,7 +391,6 @@ async function createOrder(req, res) {
         ],
       );
     } else {
-      // New customer
       const [customerResult] = await db.query(
         "INSERT INTO customers (name, phone, email, address) VALUES (?, ?, ?, ?)",
         [
@@ -380,7 +406,7 @@ async function createOrder(req, res) {
     // Generate order number
     const order_number = await generateOrderNumber();
 
-    // ✨ CREATE MIDTRANS TRANSACTION
+    // Create Midtrans transaction
     let payment_link = null;
     let qr_code_url = null;
     let thirdparty_transaction_id = null;
@@ -388,11 +414,11 @@ async function createOrder(req, res) {
     try {
       const midtransResult = await createTransaction({
         order_number,
-        amount,
+        amount: total_amount,
         customer_name,
         customer_email,
         customer_phone,
-        service_name: service.name,
+        service_name: serviceDetails.map((s) => s.service_name).join(", "),
       });
 
       payment_link = midtransResult.redirect_url;
@@ -400,7 +426,6 @@ async function createOrder(req, res) {
       thirdparty_transaction_id = midtransResult.token;
     } catch (midtransError) {
       console.error("Midtrans error:", midtransError);
-      // Continue without payment link (can be generated later)
     }
 
     // Create order
@@ -409,43 +434,67 @@ async function createOrder(req, res) {
       INSERT INTO orders (
         order_number,
         customer_id,
-        service_id,
         service_date,
         service_start_time,
-        service_duration_minutes,
-        service_notes,
-        amount,
+        total_amount,
+        total_duration_minutes,
+        notes,
         payment_status,
         payment_method,
         payment_link,
         thirdparty_transaction_id,
         status
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'pending', 'qris', ?, ?, 'pending_payment')
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, 'pending', 'qris', ?, ?, 'pending_payment')
     `,
       [
         order_number,
         customer_id,
-        service_id,
         service_date,
         service_start_time,
-        service.duration_minutes,
-        service_notes || null,
-        amount,
+        total_amount,
+        total_duration,
+        notes || null,
         payment_link,
         thirdparty_transaction_id,
       ],
     );
 
+    const order_id = orderResult.insertId;
+
+    // Insert order services
+    for (const detail of serviceDetails) {
+      await db.query(
+        `
+        INSERT INTO order_services (
+          order_id,
+          service_id,
+          service_name,
+          price,
+          duration_minutes,
+          quantity,
+          subtotal
+        ) VALUES (?, ?, ?, ?, ?, ?, ?)
+      `,
+        [
+          order_id,
+          detail.service_id,
+          detail.service_name,
+          detail.price,
+          detail.duration_minutes,
+          detail.quantity,
+          detail.subtotal,
+        ],
+      );
+    }
+
     res.status(201).json({
       success: true,
       data: {
-        order_id: orderResult.insertId,
+        order_id,
         order_number,
-        customer_id,
-        service_id,
-        service_date,
-        service_start_time,
-        amount,
+        services: serviceDetails,
+        total_amount,
+        total_duration,
         payment_link,
         qr_code_url,
       },
@@ -462,13 +511,161 @@ async function createOrder(req, res) {
   }
 }
 
+// Update order
+async function updateOrder(req, res) {
+  try {
+    const { id } = req.params;
+    const { services, notes } = req.body;
+
+    // Get current order
+    const [orders] = await db.query(
+      `
+      SELECT 
+        o.*,
+        c.name as customer_name,
+        c.email as customer_email,
+        c.phone as customer_phone
+      FROM orders o
+      JOIN customers c ON o.customer_id = c.id
+      WHERE o.id = ?
+      `,
+      [id],
+    );
+
+    if (orders.length === 0) {
+      return res.status(404).json({
+        success: false,
+        error: {
+          code: "NOT_FOUND",
+          message: "Order not found",
+        },
+      });
+    }
+
+    const order = orders[0];
+
+    // If services updated
+    if (services && services.length > 0) {
+      // Recalculate totals
+      let total_amount = 0;
+      let total_duration = 0;
+      const serviceDetails = [];
+
+      for (const svc of services) {
+        const [dbServices] = await db.query(
+          "SELECT * FROM services WHERE id = ? AND is_active = 1",
+          [svc.service_id],
+        );
+
+        if (dbServices.length === 0) {
+          return res.status(404).json({
+            success: false,
+            error: {
+              code: "SERVICE_NOT_FOUND",
+              message: `Service ID ${svc.service_id} not found`,
+            },
+          });
+        }
+
+        const service = dbServices[0];
+        const quantity = svc.quantity || 1;
+        const subtotal = service.price * quantity;
+
+        total_amount += subtotal;
+        total_duration += service.duration_minutes * quantity;
+
+        serviceDetails.push({
+          service_id: service.id,
+          service_name: service.name,
+          price: service.price,
+          duration_minutes: service.duration_minutes,
+          quantity,
+          subtotal,
+        });
+      }
+
+      // Delete old services
+      await db.query("DELETE FROM order_services WHERE order_id = ?", [id]);
+
+      // Insert new services
+      for (const detail of serviceDetails) {
+        await db.query(
+          `
+          INSERT INTO order_services (
+            order_id, service_id, service_name, price,
+            duration_minutes, quantity, subtotal
+          ) VALUES (?, ?, ?, ?, ?, ?, ?)
+        `,
+          [
+            id,
+            detail.service_id,
+            detail.service_name,
+            detail.price,
+            detail.duration_minutes,
+            detail.quantity,
+            detail.subtotal,
+          ],
+        );
+      }
+
+      // Update order totals
+      await db.query(
+        "UPDATE orders SET total_amount = ?, total_duration_minutes = ? WHERE id = ?",
+        [total_amount, total_duration, id],
+      );
+
+      // Regenerate payment link if pending
+      if (order.payment_status === "pending") {
+        try {
+          const midtransResult = await createTransaction({
+            order_number: order.order_number,
+            amount: total_amount,
+            customer_name: order.customer_name,
+            customer_email: order.customer_email,
+            customer_phone: order.customer_phone,
+            service_name: serviceDetails.map((s) => s.service_name).join(", "),
+          });
+
+          await db.query(
+            "UPDATE orders SET payment_link = ?, thirdparty_transaction_id = ? WHERE id = ?",
+            [midtransResult.redirect_url, midtransResult.token, id],
+          );
+        } catch (midtransError) {
+          console.error("Midtrans error:", midtransError);
+        }
+      }
+    }
+
+    // Update notes
+    if (notes !== undefined) {
+      await db.query("UPDATE orders SET notes = ? WHERE id = ?", [notes, id]);
+    }
+
+    res.json({
+      success: true,
+      data: {
+        order_id: id,
+        order_number: order.order_number,
+      },
+    });
+  } catch (error) {
+    console.error("Update order error:", error);
+    res.status(500).json({
+      success: false,
+      error: {
+        code: "SERVER_ERROR",
+        message: "Internal server error",
+      },
+    });
+  }
+}
+
 // Reschedule order
 async function rescheduleOrder(req, res) {
   try {
     const { id } = req.params;
     const { new_date, new_time, reason } = req.body;
 
-    // Validation
     if (!new_date || !new_time) {
       return res.status(400).json({
         success: false,
@@ -479,7 +676,6 @@ async function rescheduleOrder(req, res) {
       });
     }
 
-    // Get order
     const [orders] = await db.query("SELECT * FROM orders WHERE id = ?", [id]);
 
     if (orders.length === 0) {
@@ -494,7 +690,7 @@ async function rescheduleOrder(req, res) {
 
     const order = orders[0];
 
-    // Check schedule conflict for new time
+    // Check conflict
     const [conflicts] = await db.query(
       `
       SELECT 
@@ -508,7 +704,7 @@ async function rescheduleOrder(req, res) {
         AND o.status NOT IN ('cancelled', 'refunded')
         AND (
           (o.service_start_time <= ? AND 
-           ADDTIME(o.service_start_time, SEC_TO_TIME(o.service_duration_minutes * 60)) > ?)
+           ADDTIME(o.service_start_time, SEC_TO_TIME(o.total_duration_minutes * 60)) > ?)
           OR
           (o.service_start_time < ADDTIME(?, SEC_TO_TIME(? * 60)) AND
            o.service_start_time >= ?)
@@ -520,7 +716,7 @@ async function rescheduleOrder(req, res) {
         new_time,
         new_time,
         new_time,
-        order.service_duration_minutes,
+        order.total_duration_minutes,
         new_time,
       ],
     );
@@ -539,16 +735,11 @@ async function rescheduleOrder(req, res) {
       });
     }
 
-    // Save reschedule history
+    // Save history
     await db.query(
       `
       INSERT INTO order_reschedule_history (
-        order_id,
-        old_date,
-        old_time,
-        new_date,
-        new_time,
-        reason
+        order_id, old_date, old_time, new_date, new_time, reason
       ) VALUES (?, ?, ?, ?, ?, ?)
     `,
       [
@@ -596,7 +787,6 @@ async function updateOrderStatus(req, res) {
     const { id } = req.params;
     const { status } = req.body;
 
-    // Validation
     const validStatuses = [
       "pending_payment",
       "paid",
@@ -614,11 +804,7 @@ async function updateOrderStatus(req, res) {
       });
     }
 
-    // Get order
-    const [orders] = await db.query(
-      "SELECT order_number FROM orders WHERE id = ?",
-      [id],
-    );
+    const [orders] = await db.query("SELECT * FROM orders WHERE id = ?", [id]);
 
     if (orders.length === 0) {
       return res.status(404).json({
@@ -630,15 +816,28 @@ async function updateOrderStatus(req, res) {
       });
     }
 
-    // Update status
-    await db.query("UPDATE orders SET status = ? WHERE id = ?", [status, id]);
+    const order = orders[0];
+
+    let updateQuery = "UPDATE orders SET status = ?";
+    let params = [status];
+
+    if (status === "paid") {
+      updateQuery += ", payment_status = ?, paid_at = NOW()";
+      params.push("paid");
+    }
+
+    updateQuery += " WHERE id = ?";
+    params.push(id);
+
+    await db.query(updateQuery, params);
 
     res.json({
       success: true,
       data: {
         order_id: id,
-        order_number: orders[0].order_number,
+        order_number: order.order_number,
         status,
+        payment_status: status === "paid" ? "paid" : order.payment_status,
       },
     });
   } catch (error) {
@@ -659,7 +858,6 @@ async function cancelOrder(req, res) {
     const { id } = req.params;
     const { reason } = req.body;
 
-    // Get order
     const [orders] = await db.query("SELECT * FROM orders WHERE id = ?", [id]);
 
     if (orders.length === 0) {
@@ -674,13 +872,10 @@ async function cancelOrder(req, res) {
 
     const order = orders[0];
 
-    // Update order
     await db.query(
       "UPDATE orders SET status = ?, payment_status = ? WHERE id = ?",
       ["cancelled", "cancelled", id],
     );
-
-    // TODO: If payment was made, process refund
 
     res.json({
       success: true,
@@ -708,6 +903,7 @@ module.exports = {
   getOrderById,
   getOrderByOrderNumber,
   createOrder,
+  updateOrder,
   rescheduleOrder,
   updateOrderStatus,
   cancelOrder,

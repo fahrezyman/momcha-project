@@ -5,10 +5,11 @@ const {
   getOrderById,
   getOrderByOrderNumber,
   createOrder,
+  updateOrder,
   rescheduleOrder,
   updateOrderStatus,
   cancelOrder,
-} = require("../controllers/orderController");
+} = require("../controllers/orderController"); // ← TAMBAH 's'
 const { authenticate } = require("../middleware/auth");
 
 // Public route (for payment page)
@@ -18,8 +19,13 @@ router.get("/public/:order_number", getOrderByOrderNumber);
 router.get("/", authenticate, getAllOrders);
 router.get("/:id", authenticate, getOrderById);
 router.post("/", authenticate, createOrder);
-router.put("/:id/reschedule", authenticate, rescheduleOrder);
-router.put("/:id/status", authenticate, updateOrderStatus);
-router.put("/:id/cancel", authenticate, cancelOrder);
+
+// PENTING: Routes spesifik HARUS SEBELUM routes general!
+router.post("/:id/reschedule", authenticate, rescheduleOrder);
+router.post("/:id/cancel", authenticate, cancelOrder);
+router.patch("/:id/status", authenticate, updateOrderStatus);
+
+// General update - TERAKHIR
+router.put("/:id", authenticate, updateOrder);
 
 module.exports = router;

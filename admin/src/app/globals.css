@@ -1,0 +1,119 @@
+@import "tailwindcss";
+@import "tw-animate-css";
+@import "shadcn/tailwind.css";
+
+@theme {
+  /* Momcha Colors */
+  --color-momcha-coral: #e08b8b;
+  --color-momcha-peach: #f5d5c8;
+  --color-momcha-pink: #ff9dbd;
+  --color-momcha-brown: #8b5e3c;
+  --color-momcha-cream: #fff5ee;
+  --color-momcha-text-dark: #5c4033;
+  --color-momcha-text-light: #9e8b7e;
+
+  /* shadcn variables */
+  --color-background: #fff5ee;
+  --color-foreground: #5c4033;
+  --color-primary: #e08b8b;
+  --color-primary-foreground: #ffffff;
+  --color-secondary: #f5d5c8;
+  --color-secondary-foreground: #5c4033;
+  --color-muted: #f5d5c8;
+  --color-muted-foreground: #9e8b7e;
+  --color-accent: #ff9dbd;
+  --color-accent-foreground: #5c4033;
+  --color-destructive: #ef4444;
+  --color-border: #e8d5c8;
+  --color-input: #e8d5c8;
+  --color-ring: #e08b8b;
+  --color-card: #ffffff;
+  --color-card-foreground: #5c4033;
+
+  --radius: 0.75rem;
+
+  /* Font */
+  --font-sans: "Inter", sans-serif;
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+  body {
+    @apply bg-background text-foreground;
+  }
+}
+
+/* ========================================
+   PRINT STYLES FOR INVOICE
+   ======================================== */
+
+@media print {
+  /* Hide everything except invoice */
+  body > *:not([data-radix-popper-content-wrapper]) {
+    visibility: hidden;
+  }
+
+  /* Hide modal overlay, buttons, and dialogs chrome */
+  [data-radix-dialog-overlay],
+  .no-print,
+  button {
+    display: none !important;
+  }
+
+  /* Show and reset dialog content positioning */
+  [data-radix-dialog-content] {
+    visibility: visible !important;
+    position: static !important;
+    transform: none !important;
+    max-width: 100% !important;
+    max-height: none !important;
+    overflow: visible !important;
+    background: white !important;
+    box-shadow: none !important;
+    border: none !important;
+    margin: 0 !important;
+    padding: 0 !important;
+  }
+
+  /* Ensure invoice content is visible */
+  [data-radix-dialog-content] * {
+    visibility: visible !important;
+  }
+
+  /* Preserve colors for print */
+  * {
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+
+  /* Page setup */
+  @page {
+    size: A4;
+    margin: 15mm;
+  }
+
+  /* Reset body */
+  body {
+    margin: 0;
+    padding: 0;
+    background: white;
+  }
+
+  /* Ensure tables print correctly */
+  table {
+    page-break-inside: avoid;
+  }
+
+  tr {
+    page-break-inside: avoid;
+  }
+}
+
+/* Screen styles */
+@media screen {
+  .print-only {
+    display: none;
+  }
+}
