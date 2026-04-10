@@ -51,14 +51,14 @@ async function handlePaymentNotification(req, res) {
     let payment_status;
     let order_status;
 
-    if (
-      transaction_status === "capture" ||
-      transaction_status === "settlement"
-    ) {
-      if (fraud_status === "accept") {
-        payment_status = "paid";
-        order_status = "paid";
-      }
+    if (transaction_status === "capture" && fraud_status === "accept") {
+      // Card payment capture (fraud check required)
+      payment_status = "paid";
+      order_status = "paid";
+    } else if (transaction_status === "settlement") {
+      // QRIS / transfer settlement (no fraud_status for non-card)
+      payment_status = "paid";
+      order_status = "paid";
     } else if (transaction_status === "pending") {
       payment_status = "pending";
       order_status = "pending_payment";
@@ -74,6 +74,15 @@ async function handlePaymentNotification(req, res) {
     } else if (transaction_status === "refund") {
       payment_status = "refunded";
       order_status = "refunded";
+    } else {
+      console.log(`Unrecognized transaction_status: ${transaction_status}, skipping update`);
+      return res.json({ success: true, message: "Notification ignored" });
+    }
+
+    // Guard: skip if already processed to the same or final state
+    if (order.payment_status === payment_status) {
+      console.log(`Order ${order_id} already in status ${payment_status}, skipping`);
+      return res.json({ success: true, message: "Notification already processed" });
     }
 
     // Update order

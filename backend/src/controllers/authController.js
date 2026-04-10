@@ -114,8 +114,6 @@ async function getMe(req, res) {
   }
 }
 
-// ... (kode login & getMe yang sudah ada)
-
 // Create admin (untuk setup awal)
 async function createAdmin(req, res) {
   try {

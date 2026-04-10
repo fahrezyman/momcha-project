@@ -10,6 +10,7 @@ import {
   formatTime,
   ORDER_STATUS,
   PAYMENT_STATUS,
+  STATUS_BADGE_COLORS,
 } from "@/constants";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -235,16 +236,21 @@ export default function OrderDetailPage() {
         return;
       }
 
+      // Step 1: Update services and/or notes if changed
       if (servicesChanged || notesChanged) {
         const updatePayload = {
-          services: validServices.map((s) => ({
-            service_id: parseInt(s.service_id),
-            quantity: parseInt(s.quantity),
-            ...(s.use_custom_price &&
-              s.custom_price && {
-                custom_price: parseFloat(s.custom_price),
-              }),
-          })),
+          // Only send services array when services actually changed to avoid
+          // unnecessary Midtrans transaction recreation
+          ...(servicesChanged && {
+            services: validServices.map((s) => ({
+              service_id: parseInt(s.service_id),
+              quantity: parseInt(s.quantity),
+              ...(s.use_custom_price &&
+                s.custom_price && {
+                  custom_price: parseFloat(s.custom_price),
+                }),
+            })),
+          }),
           notes: editForm.notes,
         };
 
@@ -324,34 +330,17 @@ export default function OrderDetailPage() {
 
   function getStatusBadge(status) {
     const statusData = ORDER_STATUS[status] || { label: status, color: "gray" };
-    const colors = {
-      yellow: "bg-yellow-100 text-yellow-700 border-yellow-200",
-      blue: "bg-blue-100 text-blue-700 border-blue-200",
-      green: "bg-green-100 text-green-700 border-green-200",
-      red: "bg-red-100 text-red-700 border-red-200",
-      gray: "bg-gray-100 text-gray-700 border-gray-200",
-    };
     return (
-      <Badge className={`${colors[statusData.color]} border text-xs`}>
+      <Badge className={`${STATUS_BADGE_COLORS[statusData.color]} border text-xs`}>
         {statusData.label}
       </Badge>
     );
   }
 
   function getPaymentBadge(status) {
-    const statusData = PAYMENT_STATUS[status] || {
-      label: status,
-      color: "gray",
-    };
-    const colors = {
-      yellow: "bg-yellow-100 text-yellow-700 border-yellow-200",
-      green: "bg-green-100 text-green-700 border-green-200",
-      red: "bg-red-100 text-red-700 border-red-200",
-      gray: "bg-gray-100 text-gray-700 border-gray-200",
-      blue: "bg-blue-100 text-blue-700 border-blue-200",
-    };
+    const statusData = PAYMENT_STATUS[status] || { label: status, color: "gray" };
     return (
-      <Badge className={`${colors[statusData.color]} border text-xs`}>
+      <Badge className={`${STATUS_BADGE_COLORS[statusData.color]} border text-xs`}>
         {statusData.label}
       </Badge>
     );
