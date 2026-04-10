@@ -59,6 +59,7 @@ export default function LoginPage() {
                 alt="Momcha Logo"
                 width={80}
                 height={80}
+                priority
                 className="object-contain"
                 priority
                 onError={(e) => {
