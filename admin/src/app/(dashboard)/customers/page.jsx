@@ -304,7 +304,7 @@ export default function CustomersPage() {
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-momcha-peach">
-                    {filteredCustomers.map((customer) => (
+                    {customers.map((customer) => (
                       <tr
                         key={customer.id}
                         className="hover:bg-momcha-cream transition-colors"

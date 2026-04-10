@@ -57,6 +57,7 @@ export default function Sidebar({ isOpen, onClose }) {
               alt="Momcha Logo"
               width={75}
               height={75}
+              priority
               className="object-contain"
               onError={(e) => {
                 e.currentTarget.style.display = "none";
