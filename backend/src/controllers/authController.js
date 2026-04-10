@@ -1,6 +1,7 @@
 const bcrypt = require("bcrypt");
 const db = require("../config/db");
 const { generateToken } = require("../utils/jwt");
+const logger = require("../utils/logger");
 
 // Login
 async function login(req, res) {
@@ -66,6 +67,7 @@ async function login(req, res) {
       },
     });
   } catch (error) {
+    logger.error("Login error:", error);
     console.error("Login error:", error);
     res.status(500).json({
       success: false,
@@ -100,6 +102,7 @@ async function getMe(req, res) {
       data: rows[0],
     });
   } catch (error) {
+    logger.error("Get me error:", error);
     console.error("Get me error:", error);
     res.status(500).json({
       success: false,
@@ -163,6 +166,7 @@ async function createAdmin(req, res) {
       message: "Admin created successfully",
     });
   } catch (error) {
+    logger.error("Create admin error:", error);
     console.error("Create admin error:", error);
     res.status(500).json({
       success: false,

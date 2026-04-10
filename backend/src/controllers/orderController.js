@@ -1,3 +1,4 @@
+const logger = require("../utils/logger");
 const db = require("../config/db");
 const { generateOrderNumber } = require("../utils/generateOrderNumbers");
 const { createTransaction } = require("../utils/midtrans");
@@ -109,6 +110,7 @@ async function getAllOrders(req, res) {
       },
     });
   } catch (error) {
+    logger.error("Get all orders error:", error);
     console.error("Get orders error:", error);
     res.status(500).json({
       success: false,
@@ -182,7 +184,8 @@ async function getOrderById(req, res) {
       },
     });
   } catch (error) {
-    console.error("Get order error:", error);
+    logger.error("Get order by ID error:", error);
+    console.error("Get order by ID error:", error);
     res.status(500).json({
       success: false,
       error: {
@@ -241,6 +244,7 @@ async function getOrderByOrderNumber(req, res) {
       },
     });
   } catch (error) {
+    logger.error("Get order by number error:", error);
     console.error("Get order by number error:", error);
     res.status(500).json({
       success: false,
@@ -425,6 +429,7 @@ async function createOrder(req, res) {
       qr_code_url = midtransResult.qr_code_url;
       thirdparty_transaction_id = midtransResult.token;
     } catch (midtransError) {
+      logger.error("Midtrans error:", midtransError);
       console.error("Midtrans error:", midtransError);
     }
 
@@ -500,6 +505,7 @@ async function createOrder(req, res) {
       },
     });
   } catch (error) {
+    log.error("Create order error:", error);
     console.error("Create order error:", error);
     res.status(500).json({
       success: false,
@@ -631,6 +637,7 @@ async function updateOrder(req, res) {
             [midtransResult.redirect_url, midtransResult.token, id],
           );
         } catch (midtransError) {
+          log.error("Midtrans error:", midtransError);
           console.error("Midtrans error:", midtransError);
         }
       }
@@ -649,6 +656,7 @@ async function updateOrder(req, res) {
       },
     });
   } catch (error) {
+    log.error("Update order error:", error);
     console.error("Update order error:", error);
     res.status(500).json({
       success: false,
@@ -770,6 +778,7 @@ async function rescheduleOrder(req, res) {
       },
     });
   } catch (error) {
+    log.error("Reschedule order error:", error);
     console.error("Reschedule order error:", error);
     res.status(500).json({
       success: false,
@@ -841,6 +850,7 @@ async function updateOrderStatus(req, res) {
       },
     });
   } catch (error) {
+    logger.error("Update order status error:", error);
     console.error("Update order status error:", error);
     res.status(500).json({
       success: false,
@@ -887,6 +897,7 @@ async function cancelOrder(req, res) {
       },
     });
   } catch (error) {
+    logger.error("Cancel order error:", error);
     console.error("Cancel order error:", error);
     res.status(500).json({
       success: false,

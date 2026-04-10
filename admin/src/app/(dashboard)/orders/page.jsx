@@ -13,7 +13,14 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Plus, Search, ChevronLeft, ChevronRight } from "lucide-react";
+import {
+  Plus,
+  Search,
+  ChevronLeft,
+  ChevronRight,
+  Calendar,
+  User,
+} from "lucide-react";
 import Link from "next/link";
 
 export default function OrdersPage() {
@@ -23,7 +30,6 @@ export default function OrdersPage() {
   const [statusFilter, setStatusFilter] = useState("");
   const [paymentFilter, setPaymentFilter] = useState("");
 
-  // Pagination
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [totalOrders, setTotalOrders] = useState(0);
@@ -55,12 +61,10 @@ export default function OrdersPage() {
     loadOrders();
   }, [loadOrders]);
 
-  // Reset to page 1 when filters change
   useEffect(() => {
     setCurrentPage(1);
   }, [statusFilter, paymentFilter]);
 
-  // Filter by search (client-side)
   const filteredOrders = orders.filter((order) => {
     if (!search) return true;
     const searchLower = search.toLowerCase();
@@ -83,7 +87,7 @@ export default function OrdersPage() {
       gray: "bg-gray-100 text-gray-700",
     };
     return (
-      <Badge className={`${colors[statusData.color]} border-0`}>
+      <Badge className={`${colors[statusData.color]} border-0 text-xs`}>
         {statusData.label}
       </Badge>
     );
@@ -102,43 +106,47 @@ export default function OrdersPage() {
       blue: "bg-blue-100 text-blue-700",
     };
     return (
-      <Badge className={`${colors[statusData.color]} border-0`}>
+      <Badge className={`${colors[statusData.color]} border-0 text-xs`}>
         {statusData.label}
       </Badge>
     );
   }
 
   return (
-    <div className="space-y-6">
-      {/* Header */}
-      <div className="flex items-center justify-between">
+    <div className="space-y-4 lg:space-y-6">
+      {/* Header - Responsive */}
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
         <div>
-          <h1 className="text-2xl font-bold text-momcha-text-dark">Orders</h1>
-          <p className="text-momcha-text-light">Kelola semua order customer</p>
+          <h1 className="text-xl lg:text-2xl font-bold text-momcha-text-dark">
+            Orders
+          </h1>
+          <p className="text-sm text-momcha-text-light">
+            Kelola semua order customer
+          </p>
         </div>
-        <Link href="/orders/create">
-          <Button className="bg-momcha-coral hover:bg-momcha-brown text-white">
-            <Plus size={18} className="mr-2" />
+        <Link href="/orders/create" className="w-full sm:w-auto">
+          <Button className="w-full sm:w-auto bg-momcha-coral hover:bg-momcha-brown text-white text-sm h-9">
+            <Plus size={16} className="mr-2" />
             Buat Order Baru
           </Button>
         </Link>
       </div>
 
-      {/* Filters */}
+      {/* Filters - Responsive */}
       <Card className="border-momcha-peach">
-        <CardContent className="pt-6">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <CardContent className="pt-4 lg:pt-6">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
             {/* Search */}
-            <div className="relative">
+            <div className="relative sm:col-span-2 lg:col-span-1">
               <Search
                 className="absolute left-3 top-1/2 -translate-y-1/2 text-momcha-text-light"
-                size={18}
+                size={16}
               />
               <Input
-                placeholder="Cari order, customer, layanan..."
+                placeholder="Cari order..."
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
-                className="pl-10"
+                className="pl-9 h-9 text-sm"
               />
             </div>
 
@@ -146,7 +154,7 @@ export default function OrdersPage() {
             <select
               value={statusFilter}
               onChange={(e) => setStatusFilter(e.target.value)}
-              className="px-3 py-2 border border-momcha-peach rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-momcha-coral"
+              className="px-3 py-2 border border-momcha-peach rounded-lg text-sm h-9 focus:outline-none focus:ring-2 focus:ring-momcha-coral"
             >
               <option value="">Semua Status</option>
               {Object.entries(ORDER_STATUS).map(([key, value]) => (
@@ -160,7 +168,7 @@ export default function OrdersPage() {
             <select
               value={paymentFilter}
               onChange={(e) => setPaymentFilter(e.target.value)}
-              className="px-3 py-2 border border-momcha-peach rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-momcha-coral"
+              className="px-3 py-2 border border-momcha-peach rounded-lg text-sm h-9 focus:outline-none focus:ring-2 focus:ring-momcha-coral"
             >
               <option value="">Semua Pembayaran</option>
               {Object.entries(PAYMENT_STATUS).map(([key, value]) => (
@@ -173,7 +181,7 @@ export default function OrdersPage() {
         </CardContent>
       </Card>
 
-      {/* Orders Table */}
+      {/* Orders - Mobile: Cards, Desktop: Table */}
       <Card className="border-momcha-peach">
         <CardContent className="p-0">
           {loading ? (
@@ -182,137 +190,190 @@ export default function OrdersPage() {
             </div>
           ) : filteredOrders.length === 0 ? (
             <div className="text-center py-12 text-momcha-text-light">
-              <p>Tidak ada order yang ditemukan</p>
+              <p className="text-sm">Tidak ada order yang ditemukan</p>
             </div>
           ) : (
-            <div className="overflow-x-auto">
-              <table className="w-full">
-                <thead className="bg-momcha-cream border-b border-momcha-peach">
-                  <tr>
-                    <th className="text-left px-6 py-3 text-xs font-medium text-momcha-text-dark">
-                      Order #
-                    </th>
-                    <th className="text-left px-6 py-3 text-xs font-medium text-momcha-text-dark">
-                      Customer
-                    </th>
-                    <th className="text-left px-6 py-3 text-xs font-medium text-momcha-text-dark">
-                      Layanan
-                    </th>
-                    <th className="text-left px-6 py-3 text-xs font-medium text-momcha-text-dark">
-                      Tanggal
-                    </th>
-                    <th className="text-left px-6 py-3 text-xs font-medium text-momcha-text-dark">
-                      Waktu
-                    </th>
-                    <th className="text-left px-6 py-3 text-xs font-medium text-momcha-text-dark">
-                      Total
-                    </th>
-                    <th className="text-left px-6 py-3 text-xs font-medium text-momcha-text-dark">
-                      Pembayaran
-                    </th>
-                    <th className="text-left px-6 py-3 text-xs font-medium text-momcha-text-dark">
-                      Status
-                    </th>
-                    <th className="text-right px-6 py-3 text-xs font-medium text-momcha-text-dark">
-                      Aksi
-                    </th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-momcha-peach">
-                  {filteredOrders.map((order) => (
-                    <tr
-                      key={order.id}
-                      className="hover:bg-momcha-cream transition-colors"
-                    >
-                      {/* Order Number */}
-                      <td className="px-6 py-4">
-                        <Link
-                          href={`/orders/${order.id}`}
-                          className="text-sm font-medium text-momcha-coral hover:underline"
-                        >
+            <>
+              {/* MOBILE VIEW - Cards */}
+              <div className="lg:hidden divide-y divide-momcha-peach">
+                {filteredOrders.map((order) => (
+                  <Link
+                    key={order.id}
+                    href={`/orders/${order.id}`}
+                    className="block p-4 hover:bg-momcha-cream transition-colors"
+                  >
+                    {/* Header */}
+                    <div className="flex items-start justify-between gap-3 mb-3">
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-medium text-momcha-coral truncate">
                           {order.order_number}
-                        </Link>
-                      </td>
-
-                      {/* Customer */}
-                      <td className="px-6 py-4">
-                        <div>
-                          <p className="text-sm font-medium text-momcha-text-dark">
+                        </p>
+                        <div className="flex items-center gap-2 mt-1">
+                          <User
+                            size={12}
+                            className="text-momcha-text-light shrink-0"
+                          />
+                          <p className="text-xs text-momcha-text-dark truncate">
                             {order.customer_name}
                           </p>
-                          <p className="text-xs text-momcha-text-light">
-                            {order.customer_phone}
-                          </p>
                         </div>
-                      </td>
-
-                      {/* Services */}
-                      <td className="px-6 py-4">
-                        <div className="max-w-xs">
-                          <p className="text-sm text-momcha-text-dark line-clamp-2">
-                            {order.services_names || "-"}
-                          </p>
-                          {order.services_count > 1 && (
-                            <p className="text-xs text-momcha-text-light mt-1">
-                              {order.services_count} layanan
-                            </p>
-                          )}
-                        </div>
-                      </td>
-
-                      {/* Date */}
-                      <td className="px-6 py-4 text-sm text-momcha-text-dark">
-                        {formatDate(order.service_date)}
-                      </td>
-
-                      {/* Time */}
-                      <td className="px-6 py-4 text-sm text-momcha-text-dark">
-                        {formatTime(order.service_start_time)}
-                      </td>
-
-                      {/* Total Amount */}
-                      <td className="px-6 py-4 text-sm font-medium text-momcha-text-dark">
+                      </div>
+                      <p className="text-sm font-bold text-momcha-coral shrink-0">
                         {formatCurrency(order.total_amount)}
-                      </td>
+                      </p>
+                    </div>
 
-                      {/* Payment Status */}
-                      <td className="px-6 py-4">
-                        {getPaymentBadge(order.payment_status)}
-                      </td>
+                    {/* Services */}
+                    <div className="mb-2">
+                      <p className="text-xs text-momcha-text-dark line-clamp-1">
+                        {order.services_names || "-"}
+                      </p>
+                      {order.services_count > 1 && (
+                        <p className="text-xs text-momcha-text-light">
+                          {order.services_count} layanan
+                        </p>
+                      )}
+                    </div>
 
-                      {/* Order Status */}
-                      <td className="px-6 py-4">
-                        {getStatusBadge(order.status)}
-                      </td>
+                    {/* Date & Time */}
+                    <div className="flex items-center gap-3 mb-3 text-xs text-momcha-text-light">
+                      <div className="flex items-center gap-1">
+                        <Calendar size={12} />
+                        <span>{formatDate(order.service_date)}</span>
+                      </div>
+                      <span>•</span>
+                      <span>{formatTime(order.service_start_time)}</span>
+                    </div>
 
-                      {/* Actions */}
-                      <td className="px-6 py-4 text-right">
-                        <Link href={`/orders/${order.id}`}>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            className="text-momcha-coral hover:bg-momcha-cream"
-                          >
-                            Detail
-                          </Button>
-                        </Link>
-                      </td>
+                    {/* Badges */}
+                    <div className="flex items-center gap-2">
+                      {getPaymentBadge(order.payment_status)}
+                      {getStatusBadge(order.status)}
+                    </div>
+                  </Link>
+                ))}
+              </div>
+
+              {/* DESKTOP VIEW - Table */}
+              <div className="hidden lg:block overflow-x-auto">
+                <table className="w-full">
+                  <thead className="bg-momcha-cream border-b border-momcha-peach">
+                    <tr>
+                      <th className="text-left px-6 py-3 text-xs font-medium text-momcha-text-dark">
+                        Order #
+                      </th>
+                      <th className="text-left px-6 py-3 text-xs font-medium text-momcha-text-dark">
+                        Customer
+                      </th>
+                      <th className="text-left px-6 py-3 text-xs font-medium text-momcha-text-dark">
+                        Layanan
+                      </th>
+                      <th className="text-left px-6 py-3 text-xs font-medium text-momcha-text-dark">
+                        Tanggal
+                      </th>
+                      <th className="text-left px-6 py-3 text-xs font-medium text-momcha-text-dark">
+                        Waktu
+                      </th>
+                      <th className="text-left px-6 py-3 text-xs font-medium text-momcha-text-dark">
+                        Total
+                      </th>
+                      <th className="text-left px-6 py-3 text-xs font-medium text-momcha-text-dark">
+                        Pembayaran
+                      </th>
+                      <th className="text-left px-6 py-3 text-xs font-medium text-momcha-text-dark">
+                        Status
+                      </th>
+                      <th className="text-right px-6 py-3 text-xs font-medium text-momcha-text-dark">
+                        Aksi
+                      </th>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+                  </thead>
+                  <tbody className="divide-y divide-momcha-peach">
+                    {filteredOrders.map((order) => (
+                      <tr
+                        key={order.id}
+                        className="hover:bg-momcha-cream transition-colors"
+                      >
+                        <td className="px-6 py-4">
+                          <Link
+                            href={`/orders/${order.id}`}
+                            className="text-sm font-medium text-momcha-coral hover:underline"
+                          >
+                            {order.order_number}
+                          </Link>
+                        </td>
+
+                        <td className="px-6 py-4">
+                          <div>
+                            <p className="text-sm font-medium text-momcha-text-dark">
+                              {order.customer_name}
+                            </p>
+                            <p className="text-xs text-momcha-text-light">
+                              {order.customer_phone}
+                            </p>
+                          </div>
+                        </td>
+
+                        <td className="px-6 py-4">
+                          <div className="max-w-xs">
+                            <p className="text-sm text-momcha-text-dark line-clamp-2">
+                              {order.services_names || "-"}
+                            </p>
+                            {order.services_count > 1 && (
+                              <p className="text-xs text-momcha-text-light mt-1">
+                                {order.services_count} layanan
+                              </p>
+                            )}
+                          </div>
+                        </td>
+
+                        <td className="px-6 py-4 text-sm text-momcha-text-dark">
+                          {formatDate(order.service_date)}
+                        </td>
+
+                        <td className="px-6 py-4 text-sm text-momcha-text-dark">
+                          {formatTime(order.service_start_time)}
+                        </td>
+
+                        <td className="px-6 py-4 text-sm font-medium text-momcha-text-dark">
+                          {formatCurrency(order.total_amount)}
+                        </td>
+
+                        <td className="px-6 py-4">
+                          {getPaymentBadge(order.payment_status)}
+                        </td>
+
+                        <td className="px-6 py-4">
+                          {getStatusBadge(order.status)}
+                        </td>
+
+                        <td className="px-6 py-4 text-right">
+                          <Link href={`/orders/${order.id}`}>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="text-momcha-coral hover:bg-momcha-cream"
+                            >
+                              Detail
+                            </Button>
+                          </Link>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </>
           )}
         </CardContent>
       </Card>
 
-      {/* Pagination */}
+      {/* Pagination - Responsive */}
       {!loading && totalPages > 1 && (
-        <div className="flex items-center justify-between">
-          <p className="text-sm text-momcha-text-light">
-            Menampilkan {(currentPage - 1) * limit + 1} -{" "}
-            {Math.min(currentPage * limit, totalOrders)} dari {totalOrders}{" "}
-            orders
+        <div className="flex flex-col sm:flex-row items-center justify-between gap-3">
+          <p className="text-xs sm:text-sm text-momcha-text-light">
+            {(currentPage - 1) * limit + 1} -{" "}
+            {Math.min(currentPage * limit, totalOrders)} dari {totalOrders}
           </p>
 
           <div className="flex items-center gap-2">
@@ -321,16 +382,17 @@ export default function OrdersPage() {
               size="sm"
               onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
               disabled={currentPage === 1}
+              className="h-8 text-xs"
             >
-              <ChevronLeft size={16} className="mr-1" />
-              Previous
+              <ChevronLeft size={14} className="mr-1" />
+              <span className="hidden sm:inline">Previous</span>
+              <span className="sm:hidden">Prev</span>
             </Button>
 
             <div className="flex items-center gap-1">
               {[...Array(totalPages)].map((_, i) => {
                 const page = i + 1;
 
-                // Show first page, last page, current page, and ±1 from current
                 if (
                   page === 1 ||
                   page === totalPages ||
@@ -342,11 +404,11 @@ export default function OrdersPage() {
                       variant={currentPage === page ? "default" : "outline"}
                       size="sm"
                       onClick={() => setCurrentPage(page)}
-                      className={
+                      className={`h-8 w-8 p-0 text-xs ${
                         currentPage === page
                           ? "bg-momcha-coral hover:bg-momcha-brown text-white"
                           : ""
-                      }
+                      }`}
                     >
                       {page}
                     </Button>
@@ -356,7 +418,10 @@ export default function OrdersPage() {
                   page === currentPage + 2
                 ) {
                   return (
-                    <span key={page} className="px-2 text-momcha-text-light">
+                    <span
+                      key={page}
+                      className="px-1 text-xs text-momcha-text-light"
+                    >
                       ...
                     </span>
                   );
@@ -370,9 +435,11 @@ export default function OrdersPage() {
               size="sm"
               onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
               disabled={currentPage === totalPages}
+              className="h-8 text-xs"
             >
-              Next
-              <ChevronRight size={16} className="ml-1" />
+              <span className="hidden sm:inline">Next</span>
+              <span className="sm:hidden">Next</span>
+              <ChevronRight size={14} className="ml-1" />
             </Button>
           </div>
         </div>
