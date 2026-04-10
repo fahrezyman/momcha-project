@@ -1,5 +1,6 @@
 const express = require("express");
 const cors = require("cors");
+const helmet = require("helmet");
 require("dotenv").config();
 
 const app = express();
@@ -12,6 +13,9 @@ app.use(
 );
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
+app.use(helmet());
+app.use("/api/", require("./utils/rateLimiter").apiLimiter);
+app.use("/api/auth/login", require("./utils/rateLimiter").loginLimiter);
 
 // Routes
 app.use("/api/auth", require("./routes/auth"));

@@ -64,13 +64,12 @@ export default function OrderDetailPage() {
   const [showMarkPaidModal, setShowMarkPaidModal] = useState(false);
   const [showCompleteModal, setShowCompleteModal] = useState(false);
   const [actionLoading, setActionLoading] = useState(false);
-  const [showInvoice, setShowInvoice] = useState(false);
 
   // Services list
   const [services, setServices] = useState([]);
   const [loadingServices, setLoadingServices] = useState(false);
 
-  // Edit form (multiple services + reschedule)
+  // Edit form
   const [editForm, setEditForm] = useState({
     services: [],
     service_date: "",
@@ -88,12 +87,6 @@ export default function OrderDetailPage() {
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [orderId]);
-
-  // For printing invoice &  Add print function
-  const componentRef = useRef(null);
-  const handlePrint = useReactToPrint({
-    contentRef: componentRef,
-  });
 
   async function loadOrder() {
     try {
@@ -137,7 +130,6 @@ export default function OrderDetailPage() {
     }
   }
 
-  // Mark as Paid
   async function markAsPaid() {
     try {
       setActionLoading(true);
@@ -158,7 +150,6 @@ export default function OrderDetailPage() {
     }
   }
 
-  // Mark as Completed
   async function markAsCompleted() {
     try {
       setActionLoading(true);
@@ -179,7 +170,6 @@ export default function OrderDetailPage() {
     }
   }
 
-  // Open Edit Modal
   function openEditModal() {
     setEditForm({
       services: order.services?.map((s) => ({
@@ -202,7 +192,6 @@ export default function OrderDetailPage() {
     setShowEditModal(true);
   }
 
-  // Submit Edit Order
   async function handleEditOrder() {
     const validServices = editForm.services.filter((s) => s.service_id);
 
@@ -219,7 +208,6 @@ export default function OrderDetailPage() {
     try {
       setActionLoading(true);
 
-      // Check what changed
       const servicesChanged =
         JSON.stringify(
           validServices.map((s) => ({
@@ -247,7 +235,6 @@ export default function OrderDetailPage() {
         return;
       }
 
-      // Step 1: Update services if changed
       if (servicesChanged || notesChanged) {
         const updatePayload = {
           services: validServices.map((s) => ({
@@ -270,7 +257,6 @@ export default function OrderDetailPage() {
         }
       }
 
-      // Step 2: Reschedule if date/time changed
       if (dateTimeChanged) {
         const reschedulePayload = {
           new_date: editForm.service_date,
@@ -300,7 +286,6 @@ export default function OrderDetailPage() {
         }
       }
 
-      // Success
       toast.success("Order berhasil diubah!");
       setShowEditModal(false);
       loadOrder();
@@ -312,7 +297,6 @@ export default function OrderDetailPage() {
     }
   }
 
-  // Submit Cancel
   async function handleCancel() {
     if (!cancelReason.trim()) {
       toast.error("Alasan pembatalan wajib diisi");
@@ -348,7 +332,7 @@ export default function OrderDetailPage() {
       gray: "bg-gray-100 text-gray-700 border-gray-200",
     };
     return (
-      <Badge className={`${colors[statusData.color]} border`}>
+      <Badge className={`${colors[statusData.color]} border text-xs`}>
         {statusData.label}
       </Badge>
     );
@@ -367,7 +351,7 @@ export default function OrderDetailPage() {
       blue: "bg-blue-100 text-blue-700 border-blue-200",
     };
     return (
-      <Badge className={`${colors[statusData.color]} border`}>
+      <Badge className={`${colors[statusData.color]} border text-xs`}>
         {statusData.label}
       </Badge>
     );
@@ -397,96 +381,113 @@ export default function OrderDetailPage() {
     order.payment_status === "paid" && order.status === "paid";
 
   return (
-    <div className="space-y-6">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-4">
-          <Link href="/orders">
-            <Button variant="ghost" size="sm">
-              <ArrowLeft size={18} className="mr-2" />
-            </Button>
-          </Link>
-          <div>
-            <h1 className="text-2xl font-bold text-momcha-text-dark">
-              {order.order_number}
-            </h1>
-            <p className="text-momcha-text-light text-sm">
-              Dibuat {formatDate(order.created_at)}
-            </p>
-          </div>
+    <div className="space-y-4 lg:space-y-6">
+      {/* Header - Responsive */}
+      <div className="flex items-center gap-3 sm:gap-4">
+        <Link href="/orders">
+          <Button
+            variant="ghost"
+            size="sm"
+            className="h-8 w-8 p-0 sm:h-9 sm:w-auto sm:px-3"
+          >
+            <ArrowLeft size={18} />
+          </Button>
+        </Link>
+        <div className="flex-1 min-w-0">
+          <h1 className="text-lg sm:text-xl lg:text-2xl font-bold text-momcha-text-dark truncate">
+            {order.order_number}
+          </h1>
+          <p className="text-xs sm:text-sm text-momcha-text-light">
+            Dibuat {formatDate(order.created_at)}
+          </p>
         </div>
       </div>
 
-      {/* Status Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+      {/* Status Cards - Responsive */}
+      <div className="grid grid-cols-2 gap-3 sm:gap-4">
         <Card className="border-momcha-peach">
-          <CardContent className="pt-6">
-            <div className="flex items-center justify-between">
+          <CardContent className="pt-4 sm:pt-6">
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
               <div>
-                <p className="text-sm text-momcha-text-light mb-1">
+                <p className="text-xs text-momcha-text-light mb-1">
                   Status Pembayaran
                 </p>
                 {getPaymentBadge(order.payment_status)}
               </div>
-              <CreditCard className="text-momcha-coral" size={24} />
+              <CreditCard
+                className="text-momcha-coral hidden sm:block"
+                size={20}
+              />
             </div>
           </CardContent>
         </Card>
 
         <Card className="border-momcha-peach">
-          <CardContent className="pt-6">
-            <div className="flex items-center justify-between">
+          <CardContent className="pt-4 sm:pt-6">
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
               <div>
-                <p className="text-sm text-momcha-text-light mb-1">
+                <p className="text-xs text-momcha-text-light mb-1">
                   Status Order
                 </p>
                 {getStatusBadge(order.status)}
               </div>
-              <FileText className="text-momcha-pink" size={24} />
+              <FileText
+                className="text-momcha-pink hidden sm:block"
+                size={20}
+              />
             </div>
           </CardContent>
         </Card>
       </div>
 
-      {/* Main Content Grid */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      {/* Main Content - Stack on Mobile, Grid on Desktop */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 lg:gap-6">
         {/* Left Column - Details */}
-        <div className="lg:col-span-2 space-y-6">
+        <div className="lg:col-span-2 space-y-4 lg:space-y-6">
           {/* Customer Info */}
           <Card className="border-momcha-peach">
-            <CardHeader>
-              <CardTitle className="text-momcha-text-dark flex items-center gap-2">
-                <User size={20} className="text-momcha-coral" />
+            <CardHeader className="pb-3">
+              <CardTitle className="text-base lg:text-lg text-momcha-text-dark flex items-center gap-2">
+                <User size={18} className="text-momcha-coral" />
                 Informasi Customer
               </CardTitle>
             </CardHeader>
-            <CardContent className="space-y-3">
-              <div className="flex items-start gap-3">
-                <User size={18} className="text-momcha-text-light mt-0.5" />
-                <div>
+            <CardContent className="space-y-2 sm:space-y-3">
+              <div className="flex items-start gap-2 sm:gap-3">
+                <User
+                  size={16}
+                  className="text-momcha-text-light mt-0.5 shrink-0"
+                />
+                <div className="flex-1 min-w-0">
                   <p className="text-xs text-momcha-text-light">Nama</p>
-                  <p className="text-sm font-medium text-momcha-text-dark">
+                  <p className="text-xs sm:text-sm font-medium text-momcha-text-dark">
                     {order.customer_name}
                   </p>
                 </div>
               </div>
 
-              <div className="flex items-start gap-3">
-                <Phone size={18} className="text-momcha-text-light mt-0.5" />
-                <div>
+              <div className="flex items-start gap-2 sm:gap-3">
+                <Phone
+                  size={16}
+                  className="text-momcha-text-light mt-0.5 shrink-0"
+                />
+                <div className="flex-1 min-w-0">
                   <p className="text-xs text-momcha-text-light">Nomor HP</p>
-                  <p className="text-sm font-medium text-momcha-text-dark">
+                  <p className="text-xs sm:text-sm font-medium text-momcha-text-dark">
                     {order.customer_phone}
                   </p>
                 </div>
               </div>
 
               {order.customer_email && (
-                <div className="flex items-start gap-3">
-                  <Mail size={18} className="text-momcha-text-light mt-0.5" />
-                  <div>
+                <div className="flex items-start gap-2 sm:gap-3">
+                  <Mail
+                    size={16}
+                    className="text-momcha-text-light mt-0.5 shrink-0"
+                  />
+                  <div className="flex-1 min-w-0">
                     <p className="text-xs text-momcha-text-light">Email</p>
-                    <p className="text-sm font-medium text-momcha-text-dark">
+                    <p className="text-xs sm:text-sm font-medium text-momcha-text-dark truncate">
                       {order.customer_email}
                     </p>
                   </div>
@@ -494,11 +495,14 @@ export default function OrderDetailPage() {
               )}
 
               {order.customer_address && (
-                <div className="flex items-start gap-3">
-                  <MapPin size={18} className="text-momcha-text-light mt-0.5" />
-                  <div>
+                <div className="flex items-start gap-2 sm:gap-3">
+                  <MapPin
+                    size={16}
+                    className="text-momcha-text-light mt-0.5 shrink-0"
+                  />
+                  <div className="flex-1 min-w-0">
                     <p className="text-xs text-momcha-text-light">Alamat</p>
-                    <p className="text-sm font-medium text-momcha-text-dark">
+                    <p className="text-xs sm:text-sm font-medium text-momcha-text-dark">
                       {order.customer_address}
                     </p>
                   </div>
@@ -509,31 +513,30 @@ export default function OrderDetailPage() {
 
           {/* Service Info */}
           <Card className="border-momcha-peach">
-            <CardHeader>
-              <CardTitle className="text-momcha-text-dark flex items-center gap-2">
-                <Scissors size={20} className="text-momcha-pink" />
+            <CardHeader className="pb-3">
+              <CardTitle className="text-base lg:text-lg text-momcha-text-dark flex items-center gap-2">
+                <Scissors size={18} className="text-momcha-pink" />
                 Layanan ({order.services?.length || 0} items)
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-3">
-              {/* Services List */}
               {order.services && order.services.length > 0 ? (
-                <div className="space-y-3">
+                <div className="space-y-2 sm:space-y-3">
                   {order.services.map((svc, index) => (
                     <div
                       key={svc.id}
-                      className="flex items-start gap-3 p-3 bg-momcha-cream rounded-lg"
+                      className="flex items-start gap-2 sm:gap-3 p-2 sm:p-3 bg-momcha-cream rounded-lg"
                     >
-                      <div className="w-8 h-8 rounded-full bg-momcha-peach flex items-center justify-center shrink-0">
+                      <div className="w-6 h-6 sm:w-8 sm:h-8 rounded-full bg-momcha-peach flex items-center justify-center shrink-0">
                         <span className="text-xs font-bold text-momcha-brown">
                           {index + 1}
                         </span>
                       </div>
                       <div className="flex-1 min-w-0">
-                        <p className="text-sm font-semibold text-momcha-text-dark">
+                        <p className="text-xs sm:text-sm font-semibold text-momcha-text-dark">
                           {svc.service_name}
                         </p>
-                        <div className="flex items-center gap-4 mt-1 text-xs text-momcha-text-light">
+                        <div className="flex flex-wrap items-center gap-2 mt-0.5 sm:mt-1 text-xs text-momcha-text-light">
                           <span>
                             {formatCurrency(svc.price)} x {svc.quantity}
                           </span>
@@ -541,8 +544,8 @@ export default function OrderDetailPage() {
                           <span>{svc.duration_minutes}m per sesi</span>
                         </div>
                       </div>
-                      <div className="text-right">
-                        <p className="text-sm font-bold text-momcha-coral">
+                      <div className="text-right shrink-0">
+                        <p className="text-xs sm:text-sm font-bold text-momcha-coral">
                           {formatCurrency(svc.subtotal)}
                         </p>
                       </div>
@@ -550,13 +553,13 @@ export default function OrderDetailPage() {
                   ))}
 
                   {/* Total Summary */}
-                  <div className="pt-3 border-t border-momcha-peach">
+                  <div className="pt-2 sm:pt-3 border-t border-momcha-peach">
                     <div className="flex items-center justify-between">
                       <div>
                         <p className="text-xs text-momcha-text-light">
                           Total Durasi
                         </p>
-                        <p className="text-sm font-bold text-momcha-text-dark">
+                        <p className="text-xs sm:text-sm font-bold text-momcha-text-dark">
                           {order.total_duration_minutes} menit
                         </p>
                       </div>
@@ -564,7 +567,7 @@ export default function OrderDetailPage() {
                         <p className="text-xs text-momcha-text-light">
                           Total Harga
                         </p>
-                        <p className="text-lg font-bold text-momcha-coral">
+                        <p className="text-base sm:text-lg font-bold text-momcha-coral">
                           {formatCurrency(order.total_amount)}
                         </p>
                       </div>
@@ -578,25 +581,28 @@ export default function OrderDetailPage() {
               )}
 
               {/* Schedule Info */}
-              <div className="pt-3 border-t border-momcha-peach space-y-2">
-                <div className="flex items-start gap-3">
+              <div className="pt-2 sm:pt-3 border-t border-momcha-peach space-y-2">
+                <div className="flex items-start gap-2 sm:gap-3">
                   <Calendar
-                    size={18}
-                    className="text-momcha-text-light mt-0.5"
+                    size={16}
+                    className="text-momcha-text-light mt-0.5 shrink-0"
                   />
                   <div>
                     <p className="text-xs text-momcha-text-light">Tanggal</p>
-                    <p className="text-sm font-medium text-momcha-text-dark">
+                    <p className="text-xs sm:text-sm font-medium text-momcha-text-dark">
                       {formatDate(order.service_date)}
                     </p>
                   </div>
                 </div>
 
-                <div className="flex items-start gap-3">
-                  <Clock size={18} className="text-momcha-text-light mt-0.5" />
+                <div className="flex items-start gap-2 sm:gap-3">
+                  <Clock
+                    size={16}
+                    className="text-momcha-text-light mt-0.5 shrink-0"
+                  />
                   <div>
                     <p className="text-xs text-momcha-text-light">Waktu</p>
-                    <p className="text-sm font-medium text-momcha-text-dark">
+                    <p className="text-xs sm:text-sm font-medium text-momcha-text-dark">
                       {formatTime(order.service_start_time)} (
                       {order.total_duration_minutes} menit total)
                     </p>
@@ -604,14 +610,14 @@ export default function OrderDetailPage() {
                 </div>
 
                 {order.notes && (
-                  <div className="flex items-start gap-3">
+                  <div className="flex items-start gap-2 sm:gap-3">
                     <FileText
-                      size={18}
-                      className="text-momcha-text-light mt-0.5"
+                      size={16}
+                      className="text-momcha-text-light mt-0.5 shrink-0"
                     />
                     <div>
                       <p className="text-xs text-momcha-text-light">Catatan</p>
-                      <p className="text-sm font-medium text-momcha-text-dark">
+                      <p className="text-xs sm:text-sm font-medium text-momcha-text-dark">
                         {order.notes}
                       </p>
                     </div>
@@ -623,21 +629,21 @@ export default function OrderDetailPage() {
         </div>
 
         {/* Right Column - Actions */}
-        <div className="space-y-6">
+        <div className="space-y-4 lg:space-y-6">
           {/* Payment Info */}
           <Card className="border-momcha-peach">
-            <CardHeader>
-              <CardTitle className="text-momcha-text-dark flex items-center gap-2">
-                <DollarSign size={20} className="text-green-600" />
+            <CardHeader className="pb-3">
+              <CardTitle className="text-base lg:text-lg text-momcha-text-dark flex items-center gap-2">
+                <DollarSign size={18} className="text-green-600" />
                 Pembayaran
               </CardTitle>
             </CardHeader>
-            <CardContent className="space-y-4">
+            <CardContent className="space-y-3 sm:space-y-4">
               <div>
                 <p className="text-xs text-momcha-text-light mb-1">
                   Total Harga
                 </p>
-                <p className="text-2xl font-bold text-momcha-text-dark">
+                <p className="text-xl sm:text-2xl font-bold text-momcha-text-dark">
                   {formatCurrency(order.total_amount)}
                 </p>
               </div>
@@ -647,16 +653,16 @@ export default function OrderDetailPage() {
                   <p className="text-xs text-momcha-text-light">Payment Link</p>
                   <Button
                     onClick={copyPaymentLink}
-                    className="w-full bg-momcha-coral hover:bg-momcha-brown text-white"
+                    className="w-full bg-momcha-coral hover:bg-momcha-brown text-white text-sm h-9"
                   >
                     {copied ? (
                       <>
-                        <Check size={16} className="mr-2" />
+                        <Check size={14} className="mr-2" />
                         Tersalin!
                       </>
                     ) : (
                       <>
-                        <Copy size={16} className="mr-2" />
+                        <Copy size={14} className="mr-2" />
                         Copy Payment Link
                       </>
                     )}
@@ -668,9 +674,9 @@ export default function OrderDetailPage() {
                 <Button
                   onClick={() => setShowMarkPaidModal(true)}
                   disabled={actionLoading}
-                  className="w-full bg-green-600 hover:bg-green-700 text-white"
+                  className="w-full bg-green-600 hover:bg-green-700 text-white text-sm h-9"
                 >
-                  <Check size={16} className="mr-2" />
+                  <Check size={14} className="mr-2" />
                   Tandai Sudah Bayar
                 </Button>
               )}
@@ -678,7 +684,7 @@ export default function OrderDetailPage() {
               {order.paid_at && (
                 <div>
                   <p className="text-xs text-momcha-text-light">Dibayar pada</p>
-                  <p className="text-sm font-medium text-green-600">
+                  <p className="text-xs sm:text-sm font-medium text-green-600">
                     {formatDate(order.paid_at)}
                   </p>
                 </div>
@@ -688,49 +694,48 @@ export default function OrderDetailPage() {
 
           {/* Quick Actions */}
           <Card className="border-momcha-peach">
-            <CardHeader>
-              <CardTitle className="text-momcha-text-dark text-sm">
+            <CardHeader className="pb-3">
+              <CardTitle className="text-base lg:text-lg text-momcha-text-dark">
                 Pengaturan
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-2">
-              {/* Print Invoice - NEW */}
               <Button
                 variant="outline"
-                className="w-full justify-start"
+                className="w-full justify-start text-sm h-9"
                 onClick={() => generateInvoicePDF(order)}
               >
-                <FileDown size={16} className="mr-2" />
+                <FileDown size={14} className="mr-2" />
                 Download Invoice PDF
               </Button>
-              {/* Edit Order */}
+
               <Button
                 variant="outline"
-                className="w-full justify-start"
+                className="w-full justify-start text-sm h-9"
                 onClick={openEditModal}
                 disabled={!canEdit || actionLoading}
               >
-                <Edit size={16} className="mr-2" />
+                <Edit size={14} className="mr-2" />
                 Edit Order
               </Button>
 
               <Button
                 variant="outline"
-                className="w-full justify-start"
+                className="w-full justify-start text-sm h-9"
                 onClick={() => setShowCompleteModal(true)}
                 disabled={!canComplete || actionLoading}
               >
-                <Check size={16} className="mr-2" />
+                <Check size={14} className="mr-2" />
                 Tandai Selesai
               </Button>
 
               <Button
                 variant="outline"
-                className="w-full justify-start text-red-600 hover:bg-red-50 hover:text-red-700"
+                className="w-full justify-start text-red-600 hover:bg-red-50 hover:text-red-700 text-sm h-9"
                 onClick={() => setShowCancelModal(true)}
                 disabled={!canCancel || actionLoading}
               >
-                <X size={16} className="mr-2" />
+                <X size={14} className="mr-2" />
                 Cancel Order
               </Button>
             </CardContent>
@@ -738,21 +743,25 @@ export default function OrderDetailPage() {
         </div>
       </div>
 
-      {/* Edit Order Modal */}
+      {/* Edit Order Modal - Responsive */}
       <Dialog open={showEditModal} onOpenChange={setShowEditModal}>
-        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+        <DialogContent className="max-w-2xl w-[calc(100%-2rem)] sm:w-full max-h-[90vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle>Edit Order</DialogTitle>
-            <DialogDescription>
+            <DialogTitle className="text-base sm:text-lg">
+              Edit Order
+            </DialogTitle>
+            <DialogDescription className="text-xs sm:text-sm">
               Ubah layanan, tanggal, atau waktu
             </DialogDescription>
           </DialogHeader>
 
-          <div className="space-y-4 py-4">
+          <div className="space-y-3 sm:space-y-4 py-2 sm:py-4">
             {/* Services */}
-            <div className="space-y-3">
+            <div className="space-y-2 sm:space-y-3">
               <div className="flex items-center justify-between">
-                <label className="text-sm font-medium">Layanan</label>
+                <label className="text-xs sm:text-sm font-medium">
+                  Layanan
+                </label>
                 <Button
                   type="button"
                   variant="outline"
@@ -771,8 +780,9 @@ export default function OrderDetailPage() {
                       ],
                     });
                   }}
+                  className="h-8 text-xs"
                 >
-                  <Plus size={14} className="mr-1" />
+                  <Plus size={12} className="mr-1" />
                   Tambah
                 </Button>
               </div>
@@ -785,16 +795,15 @@ export default function OrderDetailPage() {
                   />
                 </div>
               ) : (
-                <div className="space-y-3">
+                <div className="space-y-2 sm:space-y-3">
                   {editForm.services?.map((item, index) => (
                     <div
                       key={index}
-                      className="space-y-2 pb-3 border-b border-momcha-peach last:border-0"
+                      className="space-y-2 pb-2 sm:pb-3 border-b border-momcha-peach last:border-0"
                     >
                       <div className="flex gap-2 items-start">
-                        {/* Service Select */}
                         <select
-                          className="flex-1 px-3 py-2 border rounded-lg text-sm"
+                          className="flex-1 px-2 sm:px-3 py-1.5 sm:py-2 border rounded-lg text-xs sm:text-sm"
                           value={item.service_id}
                           onChange={(e) => {
                             const newServices = [...editForm.services];
@@ -811,7 +820,6 @@ export default function OrderDetailPage() {
                           ))}
                         </select>
 
-                        {/* Quantity */}
                         <Input
                           type="number"
                           min="1"
@@ -822,11 +830,10 @@ export default function OrderDetailPage() {
                             newServices[index].quantity = e.target.value;
                             setEditForm({ ...editForm, services: newServices });
                           }}
-                          className="w-20"
+                          className="w-16 h-8 sm:h-10 text-xs sm:text-sm"
                           required
                         />
 
-                        {/* Remove */}
                         <Button
                           type="button"
                           variant="ghost"
@@ -841,16 +848,15 @@ export default function OrderDetailPage() {
                             );
                             setEditForm({ ...editForm, services: newServices });
                           }}
-                          className="text-red-600"
+                          className="text-red-600 h-8 w-8 p-0"
                         >
-                          <Trash2 size={16} />
+                          <Trash2 size={14} />
                         </Button>
                       </div>
 
-                      {/* Custom Price */}
                       {item.service_id && (
-                        <div className="flex items-center gap-3">
-                          <label className="flex items-center gap-2 text-sm cursor-pointer">
+                        <div className="flex flex-col sm:flex-row items-start sm:items-center gap-2 sm:gap-3">
+                          <label className="flex items-center gap-2 text-xs sm:text-sm cursor-pointer">
                             <input
                               type="checkbox"
                               checked={item.use_custom_price || false}
@@ -888,7 +894,7 @@ export default function OrderDetailPage() {
                                   services: newServices,
                                 });
                               }}
-                              className="w-32"
+                              className="w-full sm:w-32 h-8 sm:h-10 text-xs sm:text-sm"
                             />
                           )}
                         </div>
@@ -900,8 +906,8 @@ export default function OrderDetailPage() {
             </div>
 
             {/* Date */}
-            <div className="space-y-2">
-              <label className="text-sm font-medium">
+            <div className="space-y-1.5">
+              <label className="text-xs sm:text-sm font-medium">
                 Tanggal <span className="text-red-500">*</span>
               </label>
               <Input
@@ -911,12 +917,13 @@ export default function OrderDetailPage() {
                   setEditForm({ ...editForm, service_date: e.target.value })
                 }
                 min={new Date().toISOString().split("T")[0]}
+                className="h-9 sm:h-10 text-sm"
               />
             </div>
 
             {/* Time */}
-            <div className="space-y-2">
-              <label className="text-sm font-medium">
+            <div className="space-y-1.5">
+              <label className="text-xs sm:text-sm font-medium">
                 Waktu <span className="text-red-500">*</span>
               </label>
               <Input
@@ -928,14 +935,15 @@ export default function OrderDetailPage() {
                     service_start_time: e.target.value,
                   })
                 }
+                className="h-9 sm:h-10 text-sm"
               />
             </div>
 
             {/* Notes */}
-            <div className="space-y-2">
-              <label className="text-sm font-medium">Catatan</label>
+            <div className="space-y-1.5">
+              <label className="text-xs sm:text-sm font-medium">Catatan</label>
               <textarea
-                className="w-full px-3 py-2 border rounded-lg text-sm resize-none"
+                className="w-full px-2 sm:px-3 py-1.5 sm:py-2 border rounded-lg text-xs sm:text-sm resize-none focus:outline-none focus:ring-2 focus:ring-momcha-coral"
                 rows="2"
                 placeholder="Catatan tambahan (opsional)"
                 value={editForm.notes}
@@ -946,22 +954,23 @@ export default function OrderDetailPage() {
             </div>
           </div>
 
-          <DialogFooter>
+          <DialogFooter className="gap-2 sm:gap-0">
             <Button
               variant="outline"
               onClick={() => setShowEditModal(false)}
               disabled={actionLoading}
+              className="text-sm h-9"
             >
               Batal
             </Button>
             <Button
               onClick={handleEditOrder}
               disabled={actionLoading}
-              className="bg-momcha-coral hover:bg-momcha-brown"
+              className="bg-momcha-coral hover:bg-momcha-brown text-sm h-9"
             >
               {actionLoading ? (
                 <>
-                  <Loader2 size={16} className="mr-2 animate-spin" />
+                  <Loader2 size={14} className="mr-2 animate-spin" />
                   Menyimpan...
                 </>
               ) : (
@@ -974,49 +983,52 @@ export default function OrderDetailPage() {
 
       {/* Mark as Paid Modal */}
       <Dialog open={showMarkPaidModal} onOpenChange={setShowMarkPaidModal}>
-        <DialogContent>
+        <DialogContent className="max-w-md w-[calc(100%-2rem)] sm:w-full">
           <DialogHeader>
-            <DialogTitle>Konfirmasi Pembayaran</DialogTitle>
-            <DialogDescription>
+            <DialogTitle className="text-base sm:text-lg">
+              Konfirmasi Pembayaran
+            </DialogTitle>
+            <DialogDescription className="text-xs sm:text-sm">
               Tandai order ini sebagai sudah dibayar?
             </DialogDescription>
           </DialogHeader>
 
-          <div className="py-4">
-            <div className="flex items-center gap-3 p-4 bg-green-50 rounded-lg">
-              <Check className="text-green-600" size={24} />
-              <div>
-                <p className="text-sm font-medium text-green-900">
+          <div className="py-2 sm:py-4">
+            <div className="flex items-center gap-3 p-3 sm:p-4 bg-green-50 rounded-lg">
+              <Check className="text-green-600 shrink-0" size={20} />
+              <div className="flex-1 min-w-0">
+                <p className="text-xs sm:text-sm font-medium text-green-900 truncate">
                   {order?.order_number}
                 </p>
-                <p className="text-sm text-green-700">
+                <p className="text-xs sm:text-sm text-green-700">
                   {formatCurrency(order?.total_amount)}
                 </p>
               </div>
             </div>
           </div>
 
-          <DialogFooter>
+          <DialogFooter className="gap-2 sm:gap-0">
             <Button
               variant="outline"
               onClick={() => setShowMarkPaidModal(false)}
               disabled={actionLoading}
+              className="text-sm h-9"
             >
               Batal
             </Button>
             <Button
               onClick={markAsPaid}
               disabled={actionLoading}
-              className="bg-green-600 hover:bg-green-700 text-white"
+              className="bg-green-600 hover:bg-green-700 text-white text-sm h-9"
             >
               {actionLoading ? (
                 <>
-                  <Loader2 size={16} className="mr-2 animate-spin" />
+                  <Loader2 size={14} className="mr-2 animate-spin" />
                   Memproses...
                 </>
               ) : (
                 <>
-                  <Check size={16} className="mr-2" />
+                  <Check size={14} className="mr-2" />
                   Ya, Tandai Sudah Bayar
                 </>
               )}
@@ -1027,19 +1039,21 @@ export default function OrderDetailPage() {
 
       {/* Mark as Completed Modal */}
       <Dialog open={showCompleteModal} onOpenChange={setShowCompleteModal}>
-        <DialogContent>
+        <DialogContent className="max-w-md w-[calc(100%-2rem)] sm:w-full">
           <DialogHeader>
-            <DialogTitle>Tandai Selesai</DialogTitle>
-            <DialogDescription>
+            <DialogTitle className="text-base sm:text-lg">
+              Tandai Selesai
+            </DialogTitle>
+            <DialogDescription className="text-xs sm:text-sm">
               Order ini akan ditandai sebagai selesai
             </DialogDescription>
           </DialogHeader>
 
-          <div className="py-4">
-            <div className="flex items-center gap-3 p-4 bg-blue-50 rounded-lg">
-              <Check className="text-blue-600" size={24} />
-              <div>
-                <p className="text-sm font-medium text-blue-900">
+          <div className="py-2 sm:py-4">
+            <div className="flex items-center gap-3 p-3 sm:p-4 bg-blue-50 rounded-lg">
+              <Check className="text-blue-600 shrink-0" size={20} />
+              <div className="flex-1 min-w-0">
+                <p className="text-xs sm:text-sm font-medium text-blue-900 truncate">
                   {order?.order_number}
                 </p>
                 <p className="text-xs text-blue-700">
@@ -1053,27 +1067,28 @@ export default function OrderDetailPage() {
             </div>
           </div>
 
-          <DialogFooter>
+          <DialogFooter className="gap-2 sm:gap-0">
             <Button
               variant="outline"
               onClick={() => setShowCompleteModal(false)}
               disabled={actionLoading}
+              className="text-sm h-9"
             >
               Batal
             </Button>
             <Button
               onClick={markAsCompleted}
               disabled={actionLoading}
-              className="bg-momcha-coral hover:bg-momcha-brown"
+              className="bg-momcha-coral hover:bg-momcha-brown text-sm h-9"
             >
               {actionLoading ? (
                 <>
-                  <Loader2 size={16} className="mr-2 animate-spin" />
+                  <Loader2 size={14} className="mr-2 animate-spin" />
                   Memproses...
                 </>
               ) : (
                 <>
-                  <Check size={16} className="mr-2" />
+                  <Check size={14} className="mr-2" />
                   Ya, Tandai Selesai
                 </>
               )}
@@ -1084,22 +1099,24 @@ export default function OrderDetailPage() {
 
       {/* Cancel Modal */}
       <Dialog open={showCancelModal} onOpenChange={setShowCancelModal}>
-        <DialogContent>
+        <DialogContent className="max-w-md w-[calc(100%-2rem)] sm:w-full">
           <DialogHeader>
-            <DialogTitle>Cancel Order</DialogTitle>
-            <DialogDescription>
+            <DialogTitle className="text-base sm:text-lg">
+              Cancel Order
+            </DialogTitle>
+            <DialogDescription className="text-xs sm:text-sm">
               Order yang dibatalkan tidak dapat dikembalikan
             </DialogDescription>
           </DialogHeader>
 
-          <div className="space-y-4 py-4">
-            <div className="space-y-2">
-              <label className="text-sm font-medium">
+          <div className="space-y-3 sm:space-y-4 py-2 sm:py-4">
+            <div className="space-y-1.5">
+              <label className="text-xs sm:text-sm font-medium">
                 Alasan Pembatalan <span className="text-red-500">*</span>
               </label>
               <textarea
-                className="w-full px-3 py-2 border rounded-lg text-sm resize-none"
-                rows="4"
+                className="w-full px-2 sm:px-3 py-1.5 sm:py-2 border rounded-lg text-xs sm:text-sm resize-none focus:outline-none focus:ring-2 focus:ring-momcha-coral"
+                rows="3"
                 placeholder="Contoh: Customer request cancel, double booking, dll"
                 value={cancelReason}
                 onChange={(e) => setCancelReason(e.target.value)}
@@ -1107,22 +1124,23 @@ export default function OrderDetailPage() {
             </div>
           </div>
 
-          <DialogFooter>
+          <DialogFooter className="gap-2 sm:gap-0">
             <Button
               variant="outline"
               onClick={() => setShowCancelModal(false)}
               disabled={actionLoading}
+              className="text-sm h-9"
             >
               Batal
             </Button>
             <Button
               onClick={handleCancel}
               disabled={actionLoading}
-              className="bg-red-600 hover:bg-red-700 text-white"
+              className="bg-red-600 hover:bg-red-700 text-white text-sm h-9"
             >
               {actionLoading ? (
                 <>
-                  <Loader2 size={16} className="mr-2 animate-spin" />
+                  <Loader2 size={14} className="mr-2 animate-spin" />
                   Memproses...
                 </>
               ) : (

@@ -194,7 +194,6 @@ export default function CreateOrderPage() {
           <Link href="/orders">
             <Button variant="ghost" size="sm">
               <ArrowLeft size={18} className="mr-2" />
-              Kembali
             </Button>
           </Link>
           <div>

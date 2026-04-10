@@ -21,19 +21,43 @@ class API {
     };
 
     try {
+      console.log("🔍 API Request:", {
+        url: `${this.baseURL}${endpoint}`,
+        method: config.method || "GET",
+        hasToken: !!token,
+        token: token ? `${token.substring(0, 20)}...` : "none",
+      });
+
       const response = await fetch(`${this.baseURL}${endpoint}`, config);
+
+      console.log("📡 API Response:", {
+        status: response.status,
+        statusText: response.statusText,
+        url: response.url,
+      });
+
       const data = await response.json();
 
       // Auto redirect to login on 401
       if (response.status === 401 && typeof window !== "undefined") {
+        console.log("❌ Unauthorized - Redirecting to login");
         localStorage.removeItem("momcha_token");
         localStorage.removeItem("momcha_admin");
         window.location.href = "/login";
+        return data;
+      }
+
+      // Handle other errors
+      if (!response.ok) {
+        console.error("❌ API Error:", {
+          status: response.status,
+          data,
+        });
       }
 
       return data;
     } catch (error) {
-      console.error("API Error:", error);
+      console.error("❌ API Fetch Error:", error);
       throw error;
     }
   }
@@ -48,6 +72,16 @@ class API {
 
   async getMe() {
     return this.fetch("/auth/me");
+  }
+
+  async changePassword(currentPassword, newPassword) {
+    return this.fetch("/auth/change-password", {
+      method: "POST",
+      body: JSON.stringify({
+        current_password: currentPassword,
+        new_password: newPassword,
+      }),
+    });
   }
 
   // Services
@@ -130,6 +164,7 @@ class API {
       body: JSON.stringify(data),
     });
   }
+
   async updateOrder(id, data) {
     return this.fetch(`/orders/${id}`, {
       method: "PUT",
@@ -141,6 +176,18 @@ class API {
     return this.fetch(`/orders/${id}/cancel`, {
       method: "POST",
       body: JSON.stringify({ reason }),
+    });
+  }
+
+  // Settings
+  async getSettings() {
+    return this.fetch("/settings");
+  }
+
+  async updateSettings(data) {
+    return this.fetch("/settings", {
+      method: "PUT",
+      body: JSON.stringify(data),
     });
   }
 }

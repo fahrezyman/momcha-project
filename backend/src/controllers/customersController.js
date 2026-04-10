@@ -1,3 +1,4 @@
+const logger = require("../utils/logger");
 const db = require("../config/db");
 
 // Get all customers
@@ -72,6 +73,7 @@ async function getAllCustomers(req, res) {
       },
     });
   } catch (error) {
+    logger.error("Get customers error:", error);
     console.error("Get customers error:", error);
     res.status(500).json({
       success: false,
@@ -146,6 +148,7 @@ async function getCustomerById(req, res) {
       },
     });
   } catch (error) {
+    logger.error("Get customers error:", error);
     console.error("Get customer error:", error);
     res.status(500).json({
       success: false,
@@ -208,6 +211,7 @@ async function createCustomer(req, res) {
       },
     });
   } catch (error) {
+    logger.error("Create customer error:", error);
     console.error("Create customer error:", error);
     res.status(500).json({
       success: false,
@@ -306,6 +310,7 @@ async function updateCustomer(req, res) {
       data: rows[0],
     });
   } catch (error) {
+    logger.error("Update customer error:", error);
     console.error("Update customer error:", error);
     res.status(500).json({
       success: false,
@@ -361,6 +366,7 @@ async function deleteCustomer(req, res) {
       message: "Customer deleted successfully",
     });
   } catch (error) {
+    logger.error("Delete customer error:", error);
     console.error("Delete customer error:", error);
     res.status(500).json({
       success: false,

@@ -32,16 +32,14 @@ export default function ServicesPage() {
   const [search, setSearch] = useState("");
   const [showActiveOnly, setShowActiveOnly] = useState(false);
 
-  // Modal states
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
-  const [showToggleModal, setShowToggleModal] = useState(false); // ← TAMBAH
-  const [showDeleteModal, setShowDeleteModal] = useState(false); // ← TAMBAH
+  const [showToggleModal, setShowToggleModal] = useState(false);
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [editingService, setEditingService] = useState(null);
-  const [selectedService, setSelectedService] = useState(null); // ← TAMBAH
+  const [selectedService, setSelectedService] = useState(null);
   const [actionLoading, setActionLoading] = useState(false);
 
-  // Form data
   const [formData, setFormData] = useState({
     name: "",
     description: "",
@@ -71,7 +69,6 @@ export default function ServicesPage() {
     }
   }
 
-  // Filter by search
   const filteredServices = services.filter((service) => {
     if (!search) return true;
     const searchLower = search.toLowerCase();
@@ -81,7 +78,6 @@ export default function ServicesPage() {
     );
   });
 
-  // Reset form
   function resetForm() {
     setFormData({
       name: "",
@@ -91,13 +87,11 @@ export default function ServicesPage() {
     });
   }
 
-  // Open Create Modal
   function openCreateModal() {
     resetForm();
     setShowCreateModal(true);
   }
 
-  // Open Edit Modal
   function openEditModal(service) {
     setEditingService(service);
     setFormData({
@@ -109,7 +103,6 @@ export default function ServicesPage() {
     setShowEditModal(true);
   }
 
-  // Create Service
   async function handleCreate() {
     if (!formData.name || !formData.price || !formData.duration_minutes) {
       toast.error("Nama, harga, dan durasi wajib diisi");
@@ -136,7 +129,6 @@ export default function ServicesPage() {
     }
   }
 
-  // Update Service
   async function handleUpdate() {
     if (!formData.name || !formData.price || !formData.duration_minutes) {
       toast.error("Nama, harga, dan durasi wajib diisi");
@@ -164,13 +156,11 @@ export default function ServicesPage() {
     }
   }
 
-  // Toggle Active - Open Modal
   function openToggleModal(service) {
     setSelectedService(service);
     setShowToggleModal(true);
   }
 
-  // Confirm Toggle
   async function confirmToggle() {
     if (!selectedService) return;
 
@@ -199,13 +189,11 @@ export default function ServicesPage() {
     }
   }
 
-  // Delete - Open Modal
   function openDeleteModal(service) {
     setSelectedService(service);
     setShowDeleteModal(true);
   }
 
-  // Confirm Delete
   async function confirmDelete() {
     if (!selectedService) return;
 
@@ -229,39 +217,41 @@ export default function ServicesPage() {
   }
 
   return (
-    <div className="space-y-6">
-      {/* Header */}
-      <div className="flex items-center justify-between">
+    <div className="space-y-4 lg:space-y-6">
+      {/* Header - Responsive */}
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
         <div>
-          <h1 className="text-2xl font-bold text-momcha-text-dark">Service</h1>
-          <p className="text-momcha-text-light">
+          <h1 className="text-xl lg:text-2xl font-bold text-momcha-text-dark">
+            Services
+          </h1>
+          <p className="text-sm text-momcha-text-light">
             Kelola service yang ditawarkan
           </p>
         </div>
         <Button
           onClick={openCreateModal}
-          className="bg-momcha-coral hover:bg-momcha-brown text-white"
+          className="w-full sm:w-auto bg-momcha-coral hover:bg-momcha-brown text-white text-sm h-9"
         >
-          <Plus size={18} className="mr-2" />
+          <Plus size={16} className="mr-2" />
           Tambah Service
         </Button>
       </div>
 
-      {/* Filters */}
+      {/* Filters - Responsive */}
       <Card className="border-momcha-peach">
-        <CardContent className="pt-6">
-          <div className="flex items-center gap-4">
+        <CardContent className="pt-4 lg:pt-6">
+          <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 sm:gap-4">
             {/* Search */}
             <div className="relative flex-1">
               <Search
                 className="absolute left-3 top-1/2 -translate-y-1/2 text-momcha-text-light"
-                size={18}
+                size={16}
               />
               <Input
                 placeholder="Cari service..."
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
-                className="pl-10"
+                className="pl-9 h-9 text-sm"
               />
             </div>
 
@@ -269,9 +259,9 @@ export default function ServicesPage() {
             <Button
               variant={showActiveOnly ? "default" : "outline"}
               onClick={() => setShowActiveOnly(!showActiveOnly)}
-              className={
+              className={`h-9 text-sm ${
                 showActiveOnly ? "bg-momcha-coral hover:bg-momcha-brown" : ""
-              }
+              }`}
             >
               {showActiveOnly ? "Semua Service" : "Aktif Saja"}
             </Button>
@@ -279,7 +269,7 @@ export default function ServicesPage() {
         </CardContent>
       </Card>
 
-      {/* Services Table */}
+      {/* Services - Mobile: Cards, Desktop: Table */}
       <Card className="border-momcha-peach">
         <CardContent className="p-0">
           {loading ? (
@@ -288,130 +278,211 @@ export default function ServicesPage() {
             </div>
           ) : filteredServices.length === 0 ? (
             <div className="text-center py-12 text-momcha-text-light">
-              <p>Tidak ada service yang ditemukan</p>
+              <p className="text-sm">Tidak ada service yang ditemukan</p>
             </div>
           ) : (
-            <div className="overflow-x-auto">
-              <table className="w-full">
-                <thead className="bg-momcha-cream border-b border-momcha-peach">
-                  <tr>
-                    <th className="text-left px-6 py-3 text-xs font-medium text-momcha-text-dark">
-                      Service
-                    </th>
-                    <th className="text-left px-6 py-3 text-xs font-medium text-momcha-text-dark">
-                      Deskripsi
-                    </th>
-                    <th className="text-left px-6 py-3 text-xs font-medium text-momcha-text-dark">
-                      Harga
-                    </th>
-                    <th className="text-left px-6 py-3 text-xs font-medium text-momcha-text-dark">
-                      Durasi
-                    </th>
-                    <th className="text-left px-6 py-3 text-xs font-medium text-momcha-text-dark">
-                      Status
-                    </th>
-                    <th className="text-right px-6 py-3 text-xs font-medium text-momcha-text-dark">
-                      Aksi
-                    </th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-momcha-peach">
-                  {filteredServices.map((service) => (
-                    <tr
-                      key={service.id}
-                      className="hover:bg-momcha-cream transition-colors"
-                    >
-                      <td className="px-6 py-4">
-                        <p className="text-sm font-medium text-momcha-text-dark">
+            <>
+              {/* MOBILE VIEW - Cards */}
+              <div className="lg:hidden divide-y divide-momcha-peach">
+                {filteredServices.map((service) => (
+                  <div
+                    key={service.id}
+                    className="p-4 hover:bg-momcha-cream transition-colors"
+                  >
+                    {/* Header */}
+                    <div className="flex items-start justify-between gap-3 mb-2">
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-semibold text-momcha-text-dark truncate">
                           {service.name}
                         </p>
-                      </td>
-                      <td className="px-6 py-4">
-                        <p className="text-sm text-momcha-text-light line-clamp-2 max-w-xs">
+                        <p className="text-xs text-momcha-text-light line-clamp-2 mt-0.5">
                           {service.description || "-"}
                         </p>
-                      </td>
-                      <td className="px-6 py-4">
-                        <p className="text-sm font-medium text-momcha-text-dark">
-                          {formatCurrency(service.price)}
-                        </p>
-                      </td>
-                      <td className="px-6 py-4">
-                        <div className="flex items-center gap-2 text-sm text-momcha-text-dark">
-                          <Clock size={14} className="text-momcha-text-light" />
-                          {service.duration_minutes} menit
-                        </div>
-                      </td>
-                      <td className="px-6 py-4">
-                        <Badge
-                          className={
-                            service.is_active
-                              ? "bg-green-100 text-green-700 border-0"
-                              : "bg-gray-100 text-gray-700 border-0"
-                          }
-                        >
-                          {service.is_active ? "Aktif" : "Nonaktif"}
-                        </Badge>
-                      </td>
-                      <td className="px-6 py-4">
-                        <div className="flex items-center justify-end gap-2">
-                          {/* Edit */}
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => openEditModal(service)}
-                            className="text-momcha-coral hover:bg-momcha-cream"
-                          >
-                            <Edit size={16} />
-                          </Button>
+                      </div>
+                      <Badge
+                        className={`shrink-0 text-xs ${
+                          service.is_active
+                            ? "bg-green-100 text-green-700 border-0"
+                            : "bg-gray-100 text-gray-700 border-0"
+                        }`}
+                      >
+                        {service.is_active ? "Aktif" : "Nonaktif"}
+                      </Badge>
+                    </div>
 
-                          {/* Toggle Active */}
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => openToggleModal(service)} // ← GANTI
+                    {/* Info */}
+                    <div className="flex items-center gap-3 mb-3 text-xs text-momcha-text-dark">
+                      <span className="font-medium text-momcha-coral">
+                        {formatCurrency(service.price)}
+                      </span>
+                      <span className="text-momcha-text-light">•</span>
+                      <div className="flex items-center gap-1">
+                        <Clock size={12} className="text-momcha-text-light" />
+                        <span>{service.duration_minutes} menit</span>
+                      </div>
+                    </div>
+
+                    {/* Actions */}
+                    <div className="flex items-center gap-2">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => openEditModal(service)}
+                        className="flex-1 h-8 text-xs text-momcha-coral border-momcha-coral"
+                      >
+                        <Edit size={12} className="mr-1" />
+                        Edit
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => openToggleModal(service)}
+                        className={`h-8 w-8 p-0 ${
+                          service.is_active
+                            ? "text-yellow-600 border-yellow-600"
+                            : "text-green-600 border-green-600"
+                        }`}
+                      >
+                        <Power size={14} />
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => openDeleteModal(service)}
+                        className="h-8 w-8 p-0 text-red-600 border-red-600"
+                      >
+                        <Trash2 size={14} />
+                      </Button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              {/* DESKTOP VIEW - Table */}
+              <div className="hidden lg:block overflow-x-auto">
+                <table className="w-full">
+                  <thead className="bg-momcha-cream border-b border-momcha-peach">
+                    <tr>
+                      <th className="text-left px-6 py-3 text-xs font-medium text-momcha-text-dark">
+                        Service
+                      </th>
+                      <th className="text-left px-6 py-3 text-xs font-medium text-momcha-text-dark">
+                        Deskripsi
+                      </th>
+                      <th className="text-left px-6 py-3 text-xs font-medium text-momcha-text-dark">
+                        Harga
+                      </th>
+                      <th className="text-left px-6 py-3 text-xs font-medium text-momcha-text-dark">
+                        Durasi
+                      </th>
+                      <th className="text-left px-6 py-3 text-xs font-medium text-momcha-text-dark">
+                        Status
+                      </th>
+                      <th className="text-right px-6 py-3 text-xs font-medium text-momcha-text-dark">
+                        Aksi
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-momcha-peach">
+                    {filteredServices.map((service) => (
+                      <tr
+                        key={service.id}
+                        className="hover:bg-momcha-cream transition-colors"
+                      >
+                        <td className="px-6 py-4">
+                          <p className="text-sm font-medium text-momcha-text-dark">
+                            {service.name}
+                          </p>
+                        </td>
+                        <td className="px-6 py-4">
+                          <p className="text-sm text-momcha-text-light line-clamp-2 max-w-xs">
+                            {service.description || "-"}
+                          </p>
+                        </td>
+                        <td className="px-6 py-4">
+                          <p className="text-sm font-medium text-momcha-text-dark">
+                            {formatCurrency(service.price)}
+                          </p>
+                        </td>
+                        <td className="px-6 py-4">
+                          <div className="flex items-center gap-2 text-sm text-momcha-text-dark">
+                            <Clock
+                              size={14}
+                              className="text-momcha-text-light"
+                            />
+                            {service.duration_minutes} menit
+                          </div>
+                        </td>
+                        <td className="px-6 py-4">
+                          <Badge
                             className={
                               service.is_active
-                                ? "text-yellow-600 hover:bg-yellow-50"
-                                : "text-green-600 hover:bg-green-50"
+                                ? "bg-green-100 text-green-700 border-0"
+                                : "bg-gray-100 text-gray-700 border-0"
                             }
                           >
-                            <Power size={16} />
-                          </Button>
+                            {service.is_active ? "Aktif" : "Nonaktif"}
+                          </Badge>
+                        </td>
+                        <td className="px-6 py-4">
+                          <div className="flex items-center justify-end gap-2">
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => openEditModal(service)}
+                              className="text-momcha-coral hover:bg-momcha-cream"
+                            >
+                              <Edit size={16} />
+                            </Button>
 
-                          {/* Delete */}
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => openDeleteModal(service)} // ← GANTI
-                            className="text-red-600 hover:bg-red-50"
-                          >
-                            <Trash2 size={16} />
-                          </Button>
-                        </div>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => openToggleModal(service)}
+                              className={
+                                service.is_active
+                                  ? "text-yellow-600 hover:bg-yellow-50"
+                                  : "text-green-600 hover:bg-green-50"
+                              }
+                            >
+                              <Power size={16} />
+                            </Button>
+
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => openDeleteModal(service)}
+                              className="text-red-600 hover:bg-red-50"
+                            >
+                              <Trash2 size={16} />
+                            </Button>
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </>
           )}
         </CardContent>
       </Card>
 
-      {/* Create Modal */}
+      {/* Create Modal - Responsive */}
       <Dialog open={showCreateModal} onOpenChange={setShowCreateModal}>
-        <DialogContent>
+        <DialogContent className="max-w-md w-[calc(100%-2rem)] sm:w-full max-h-[90vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle>Tambah Service Baru</DialogTitle>
-            <DialogDescription>
+            <DialogTitle className="text-base sm:text-lg">
+              Tambah Service Baru
+            </DialogTitle>
+            <DialogDescription className="text-xs sm:text-sm">
               Isi form di bawah untuk menambah service
             </DialogDescription>
           </DialogHeader>
 
-          <div className="space-y-4 py-4">
-            <div className="space-y-2">
-              <label className="text-sm font-medium">
+          <div className="space-y-3 sm:space-y-4 py-2 sm:py-4">
+            <div className="space-y-1.5">
+              <label className="text-xs sm:text-sm font-medium">
                 Nama Service <span className="text-red-500">*</span>
               </label>
               <Input
@@ -420,13 +491,16 @@ export default function ServicesPage() {
                 onChange={(e) =>
                   setFormData({ ...formData, name: e.target.value })
                 }
+                className="h-9 text-sm"
               />
             </div>
 
-            <div className="space-y-2">
-              <label className="text-sm font-medium">Deskripsi</label>
+            <div className="space-y-1.5">
+              <label className="text-xs sm:text-sm font-medium">
+                Deskripsi
+              </label>
               <textarea
-                className="w-full px-3 py-2 border rounded-lg text-sm resize-none"
+                className="w-full px-2 sm:px-3 py-1.5 sm:py-2 border rounded-lg text-xs sm:text-sm resize-none focus:outline-none focus:ring-2 focus:ring-momcha-coral"
                 rows="3"
                 placeholder="Deskripsi singkat service"
                 value={formData.description}
@@ -436,9 +510,9 @@ export default function ServicesPage() {
               />
             </div>
 
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <label className="text-sm font-medium">
+            <div className="grid grid-cols-2 gap-3 sm:gap-4">
+              <div className="space-y-1.5">
+                <label className="text-xs sm:text-sm font-medium">
                   Harga <span className="text-red-500">*</span>
                 </label>
                 <Input
@@ -448,11 +522,12 @@ export default function ServicesPage() {
                   onChange={(e) =>
                     setFormData({ ...formData, price: e.target.value })
                   }
+                  className="h-9 text-sm"
                 />
               </div>
 
-              <div className="space-y-2">
-                <label className="text-sm font-medium">
+              <div className="space-y-1.5">
+                <label className="text-xs sm:text-sm font-medium">
                   Durasi (menit) <span className="text-red-500">*</span>
                 </label>
                 <Input
@@ -465,27 +540,29 @@ export default function ServicesPage() {
                       duration_minutes: e.target.value,
                     })
                   }
+                  className="h-9 text-sm"
                 />
               </div>
             </div>
           </div>
 
-          <DialogFooter>
+          <DialogFooter className="gap-2 sm:gap-0">
             <Button
               variant="outline"
               onClick={() => setShowCreateModal(false)}
               disabled={actionLoading}
+              className="text-sm h-9"
             >
               Batal
             </Button>
             <Button
               onClick={handleCreate}
               disabled={actionLoading}
-              className="bg-momcha-coral hover:bg-momcha-brown"
+              className="bg-momcha-coral hover:bg-momcha-brown text-sm h-9"
             >
               {actionLoading ? (
                 <>
-                  <Loader2 size={16} className="mr-2 animate-spin" />
+                  <Loader2 size={14} className="mr-2 animate-spin" />
                   Menyimpan...
                 </>
               ) : (
@@ -496,17 +573,21 @@ export default function ServicesPage() {
         </DialogContent>
       </Dialog>
 
-      {/* Edit Modal */}
+      {/* Edit Modal - Responsive */}
       <Dialog open={showEditModal} onOpenChange={setShowEditModal}>
-        <DialogContent>
+        <DialogContent className="max-w-md w-[calc(100%-2rem)] sm:w-full max-h-[90vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle>Edit Service</DialogTitle>
-            <DialogDescription>Update informasi service</DialogDescription>
+            <DialogTitle className="text-base sm:text-lg">
+              Edit Service
+            </DialogTitle>
+            <DialogDescription className="text-xs sm:text-sm">
+              Update informasi service
+            </DialogDescription>
           </DialogHeader>
 
-          <div className="space-y-4 py-4">
-            <div className="space-y-2">
-              <label className="text-sm font-medium">
+          <div className="space-y-3 sm:space-y-4 py-2 sm:py-4">
+            <div className="space-y-1.5">
+              <label className="text-xs sm:text-sm font-medium">
                 Nama Service <span className="text-red-500">*</span>
               </label>
               <Input
@@ -515,13 +596,16 @@ export default function ServicesPage() {
                 onChange={(e) =>
                   setFormData({ ...formData, name: e.target.value })
                 }
+                className="h-9 text-sm"
               />
             </div>
 
-            <div className="space-y-2">
-              <label className="text-sm font-medium">Deskripsi</label>
+            <div className="space-y-1.5">
+              <label className="text-xs sm:text-sm font-medium">
+                Deskripsi
+              </label>
               <textarea
-                className="w-full px-3 py-2 border rounded-lg text-sm resize-none"
+                className="w-full px-2 sm:px-3 py-1.5 sm:py-2 border rounded-lg text-xs sm:text-sm resize-none focus:outline-none focus:ring-2 focus:ring-momcha-coral"
                 rows="3"
                 placeholder="Deskripsi singkat service"
                 value={formData.description}
@@ -531,9 +615,9 @@ export default function ServicesPage() {
               />
             </div>
 
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <label className="text-sm font-medium">
+            <div className="grid grid-cols-2 gap-3 sm:gap-4">
+              <div className="space-y-1.5">
+                <label className="text-xs sm:text-sm font-medium">
                   Harga <span className="text-red-500">*</span>
                 </label>
                 <Input
@@ -543,11 +627,12 @@ export default function ServicesPage() {
                   onChange={(e) =>
                     setFormData({ ...formData, price: e.target.value })
                   }
+                  className="h-9 text-sm"
                 />
               </div>
 
-              <div className="space-y-2">
-                <label className="text-sm font-medium">
+              <div className="space-y-1.5">
+                <label className="text-xs sm:text-sm font-medium">
                   Durasi (menit) <span className="text-red-500">*</span>
                 </label>
                 <Input
@@ -560,27 +645,29 @@ export default function ServicesPage() {
                       duration_minutes: e.target.value,
                     })
                   }
+                  className="h-9 text-sm"
                 />
               </div>
             </div>
           </div>
 
-          <DialogFooter>
+          <DialogFooter className="gap-2 sm:gap-0">
             <Button
               variant="outline"
               onClick={() => setShowEditModal(false)}
               disabled={actionLoading}
+              className="text-sm h-9"
             >
               Batal
             </Button>
             <Button
               onClick={handleUpdate}
               disabled={actionLoading}
-              className="bg-momcha-coral hover:bg-momcha-brown"
+              className="bg-momcha-coral hover:bg-momcha-brown text-sm h-9"
             >
               {actionLoading ? (
                 <>
-                  <Loader2 size={16} className="mr-2 animate-spin" />
+                  <Loader2 size={14} className="mr-2 animate-spin" />
                   Menyimpan...
                 </>
               ) : (
@@ -593,30 +680,30 @@ export default function ServicesPage() {
 
       {/* Toggle Active Modal */}
       <Dialog open={showToggleModal} onOpenChange={setShowToggleModal}>
-        <DialogContent>
+        <DialogContent className="max-w-md w-[calc(100%-2rem)] sm:w-full">
           <DialogHeader>
-            <DialogTitle>
+            <DialogTitle className="text-base sm:text-lg">
               {selectedService?.is_active ? "Nonaktifkan" : "Aktifkan"} Service
             </DialogTitle>
-            <DialogDescription>
+            <DialogDescription className="text-xs sm:text-sm">
               {selectedService?.is_active
                 ? "Service yang dinonaktifkan tidak akan muncul di daftar order baru"
                 : "Service akan muncul kembali di daftar order baru"}
             </DialogDescription>
           </DialogHeader>
 
-          <div className="py-4">
-            <div className="flex items-center gap-3 p-4 bg-momcha-cream rounded-lg">
+          <div className="py-2 sm:py-4">
+            <div className="flex items-center gap-3 p-3 sm:p-4 bg-momcha-cream rounded-lg">
               <Power
-                className={
+                className={`shrink-0 ${
                   selectedService?.is_active
                     ? "text-yellow-600"
                     : "text-green-600"
-                }
-                size={24}
+                }`}
+                size={20}
               />
-              <div>
-                <p className="text-sm font-medium text-momcha-text-dark">
+              <div className="flex-1 min-w-0">
+                <p className="text-xs sm:text-sm font-medium text-momcha-text-dark truncate">
                   {selectedService?.name}
                 </p>
                 <p className="text-xs text-momcha-text-light">
@@ -627,31 +714,32 @@ export default function ServicesPage() {
             </div>
           </div>
 
-          <DialogFooter>
+          <DialogFooter className="gap-2 sm:gap-0">
             <Button
               variant="outline"
               onClick={() => setShowToggleModal(false)}
               disabled={actionLoading}
+              className="text-sm h-9"
             >
               Batal
             </Button>
             <Button
               onClick={confirmToggle}
               disabled={actionLoading}
-              className={
+              className={`text-sm h-9 ${
                 selectedService?.is_active
                   ? "bg-yellow-600 hover:bg-yellow-700 text-white"
                   : "bg-green-600 hover:bg-green-700 text-white"
-              }
+              }`}
             >
               {actionLoading ? (
                 <>
-                  <Loader2 size={16} className="mr-2 animate-spin" />
+                  <Loader2 size={14} className="mr-2 animate-spin" />
                   Memproses...
                 </>
               ) : (
                 <>
-                  <Power size={16} className="mr-2" />
+                  <Power size={14} className="mr-2" />
                   {selectedService?.is_active
                     ? "Ya, Nonaktifkan"
                     : "Ya, Aktifkan"}
@@ -664,19 +752,21 @@ export default function ServicesPage() {
 
       {/* Delete Modal */}
       <Dialog open={showDeleteModal} onOpenChange={setShowDeleteModal}>
-        <DialogContent>
+        <DialogContent className="max-w-md w-[calc(100%-2rem)] sm:w-full">
           <DialogHeader>
-            <DialogTitle>Hapus Service</DialogTitle>
-            <DialogDescription>
+            <DialogTitle className="text-base sm:text-lg">
+              Hapus Service
+            </DialogTitle>
+            <DialogDescription className="text-xs sm:text-sm">
               service yang dihapus tidak dapat dikembalikan
             </DialogDescription>
           </DialogHeader>
 
-          <div className="py-4">
-            <div className="flex items-center gap-3 p-4 bg-red-50 rounded-lg">
-              <Trash2 className="text-red-600" size={24} />
-              <div>
-                <p className="text-sm font-medium text-red-900">
+          <div className="py-2 sm:py-4">
+            <div className="flex items-center gap-3 p-3 sm:p-4 bg-red-50 rounded-lg">
+              <Trash2 className="text-red-600 shrink-0" size={20} />
+              <div className="flex-1 min-w-0">
+                <p className="text-xs sm:text-sm font-medium text-red-900 truncate">
                   {selectedService?.name}
                 </p>
                 <p className="text-xs text-red-700">
@@ -685,32 +775,33 @@ export default function ServicesPage() {
                 </p>
               </div>
             </div>
-            <p className="text-sm text-momcha-text-light mt-4">
+            <p className="text-xs sm:text-sm text-momcha-text-light mt-3 sm:mt-4">
               ⚠️ Pastikan tidak ada order aktif menggunakan service ini
             </p>
           </div>
 
-          <DialogFooter>
+          <DialogFooter className="gap-2 sm:gap-0">
             <Button
               variant="outline"
               onClick={() => setShowDeleteModal(false)}
               disabled={actionLoading}
+              className="text-sm h-9"
             >
               Batal
             </Button>
             <Button
               onClick={confirmDelete}
               disabled={actionLoading}
-              className="bg-red-600 hover:bg-red-700 text-white"
+              className="bg-red-600 hover:bg-red-700 text-white text-sm h-9"
             >
               {actionLoading ? (
                 <>
-                  <Loader2 size={16} className="mr-2 animate-spin" />
+                  <Loader2 size={14} className="mr-2 animate-spin" />
                   Menghapus...
                 </>
               ) : (
                 <>
-                  <Trash2 size={16} className="mr-2" />
+                  <Trash2 size={14} className="mr-2" />
                   Ya, Hapus Service
                 </>
               )}

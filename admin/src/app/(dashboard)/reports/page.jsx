@@ -80,7 +80,7 @@ export default function ReportsPage() {
           (o) => o.payment_status === "paid",
         );
         const totalRevenue = paidOrders.reduce(
-          (sum, o) => sum + parseFloat(o.total_amount || 0), // ← UPDATED
+          (sum, o) => sum + parseFloat(o.total_amount || 0),
           0,
         );
         const totalOrders = ordersData.length;
@@ -116,12 +116,12 @@ export default function ReportsPage() {
       const existing = acc.find((item) => item.date === date);
 
       if (existing) {
-        existing.revenue += parseFloat(order.total_amount || 0); // ← UPDATED
+        existing.revenue += parseFloat(order.total_amount || 0);
         existing.orders += 1;
       } else {
         acc.push({
           date,
-          revenue: parseFloat(order.total_amount || 0), // ← UPDATED
+          revenue: parseFloat(order.total_amount || 0),
           orders: 1,
         });
       }
@@ -134,11 +134,10 @@ export default function ReportsPage() {
       dateLabel: format(new Date(item.date), "d MMM", { locale: id }),
     }));
 
-  // Top services - UPDATED AGGREGATION
+  // Top services
   const servicesMap = new Map();
 
   orders.forEach((order) => {
-    // Split services_names (comma-separated from backend GROUP_CONCAT)
     const servicesList = order.services_names?.split(", ") || [];
     const serviceCount = order.services_count || 1;
     const amountPerService = parseFloat(order.total_amount || 0) / serviceCount;
@@ -210,8 +209,8 @@ export default function ReportsPage() {
       ...orders.map((order) => [
         order.service_date,
         order.customer_name,
-        order.services_names || "-", // ← UPDATED
-        order.total_amount, // ← UPDATED
+        order.services_names || "-",
+        order.total_amount,
         order.payment_status,
         order.status,
       ]),
@@ -237,39 +236,49 @@ export default function ReportsPage() {
   }
 
   return (
-    <div className="space-y-6">
-      {/* Header */}
-      <div className="flex items-center justify-between">
+    <div className="space-y-4 lg:space-y-6">
+      {/* Header - Responsive */}
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
         <div>
-          <h1 className="text-2xl font-bold text-momcha-text-dark">
+          <h1 className="text-xl lg:text-2xl font-bold text-momcha-text-dark">
             Laporan & Analisis
           </h1>
-          <p className="text-momcha-text-light">Dashboard performa bisnis</p>
+          <p className="text-sm text-momcha-text-light">
+            Dashboard performa bisnis
+          </p>
         </div>
-        <Button onClick={exportToCSV} variant="outline" className="gap-2">
+        <Button
+          onClick={exportToCSV}
+          variant="outline"
+          className="gap-2 w-full sm:w-auto"
+          size="sm"
+        >
           <Download size={16} />
-          Export CSV
+          <span className="hidden sm:inline">Export CSV</span>
+          <span className="sm:hidden">Export</span>
         </Button>
       </div>
 
-      {/* Date Filter */}
+      {/* Date Filter - Responsive */}
       <Card className="border-momcha-peach">
-        <CardContent className="pt-6">
-          <div className="flex items-center gap-4">
-            <Calendar size={18} className="text-momcha-coral" />
-            <div className="flex items-center gap-2">
+        <CardContent className="pt-4 lg:pt-6">
+          <div className="flex flex-col sm:flex-row sm:items-center gap-3">
+            <Calendar size={18} className="text-momcha-coral hidden sm:block" />
+            <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 flex-1">
               <Input
                 type="date"
                 value={dateFrom}
                 onChange={(e) => setDateFrom(e.target.value)}
-                className="w-40"
+                className="w-full sm:w-40"
               />
-              <span className="text-momcha-text-light">s/d</span>
+              <span className="text-momcha-text-light text-center sm:inline hidden">
+                s/d
+              </span>
               <Input
                 type="date"
                 value={dateTo}
                 onChange={(e) => setDateTo(e.target.value)}
-                className="w-40"
+                className="w-full sm:w-40"
               />
             </div>
             <Button
@@ -279,6 +288,7 @@ export default function ReportsPage() {
                 setDateTo(format(endOfMonth(new Date()), "yyyy-MM-dd"));
               }}
               variant="outline"
+              className="w-full sm:w-auto"
             >
               Bulan Ini
             </Button>
@@ -286,21 +296,21 @@ export default function ReportsPage() {
         </CardContent>
       </Card>
 
-      {/* Summary Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+      {/* Summary Cards - Responsive Grid */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 lg:gap-4">
         {/* Total Revenue */}
         <Card className="border-momcha-peach">
-          <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium text-momcha-text-light">
+          <CardHeader className="flex flex-row items-center justify-between pb-2 space-y-0">
+            <CardTitle className="text-xs lg:text-sm font-medium text-momcha-text-light">
               Total Pemasukan
             </CardTitle>
-            <DollarSign className="text-green-600" size={20} />
+            <DollarSign className="text-green-600" size={18} />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-momcha-text-dark">
+            <div className="text-lg lg:text-2xl font-bold text-momcha-text-dark">
               {formatCurrency(stats.totalRevenue)}
             </div>
-            <p className="text-xs text-momcha-text-light mt-1">
+            <p className="text-xs text-momcha-text-light mt-1 hidden sm:block">
               Dari order yang sudah dibayar
             </p>
           </CardContent>
@@ -308,17 +318,17 @@ export default function ReportsPage() {
 
         {/* Total Orders */}
         <Card className="border-momcha-peach">
-          <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium text-momcha-text-light">
+          <CardHeader className="flex flex-row items-center justify-between pb-2 space-y-0">
+            <CardTitle className="text-xs lg:text-sm font-medium text-momcha-text-light">
               Total Orders
             </CardTitle>
-            <ShoppingBag className="text-momcha-coral" size={20} />
+            <ShoppingBag className="text-momcha-coral" size={18} />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-momcha-text-dark">
+            <div className="text-lg lg:text-2xl font-bold text-momcha-text-dark">
               {stats.totalOrders}
             </div>
-            <p className="text-xs text-momcha-text-light mt-1">
+            <p className="text-xs text-momcha-text-light mt-1 hidden sm:block">
               Semua status order
             </p>
           </CardContent>
@@ -326,17 +336,17 @@ export default function ReportsPage() {
 
         {/* Total Customers */}
         <Card className="border-momcha-peach">
-          <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium text-momcha-text-light">
+          <CardHeader className="flex flex-row items-center justify-between pb-2 space-y-0">
+            <CardTitle className="text-xs lg:text-sm font-medium text-momcha-text-light">
               Total Customers
             </CardTitle>
-            <Users className="text-momcha-pink" size={20} />
+            <Users className="text-momcha-pink" size={18} />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-momcha-text-dark">
+            <div className="text-lg lg:text-2xl font-bold text-momcha-text-dark">
               {stats.totalCustomers}
             </div>
-            <p className="text-xs text-momcha-text-light mt-1">
+            <p className="text-xs text-momcha-text-light mt-1 hidden sm:block">
               Customer terdaftar
             </p>
           </CardContent>
@@ -344,27 +354,29 @@ export default function ReportsPage() {
 
         {/* Average Order Value */}
         <Card className="border-momcha-peach">
-          <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium text-momcha-text-light">
+          <CardHeader className="flex flex-row items-center justify-between pb-2 space-y-0">
+            <CardTitle className="text-xs lg:text-sm font-medium text-momcha-text-light">
               Rata-rata Order
             </CardTitle>
-            <TrendingUp className="text-blue-600" size={20} />
+            <TrendingUp className="text-blue-600" size={18} />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-momcha-text-dark">
+            <div className="text-lg lg:text-2xl font-bold text-momcha-text-dark">
               {formatCurrency(stats.averageOrderValue)}
             </div>
-            <p className="text-xs text-momcha-text-light mt-1">Per transaksi</p>
+            <p className="text-xs text-momcha-text-light mt-1 hidden sm:block">
+              Per transaksi
+            </p>
           </CardContent>
         </Card>
       </div>
 
-      {/* Charts Row 1 */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      {/* Charts Row 1 - Stack on Mobile */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 lg:gap-6">
         {/* Revenue Chart */}
         <Card className="border-momcha-peach">
           <CardHeader>
-            <CardTitle className="text-momcha-text-dark">
+            <CardTitle className="text-base lg:text-lg text-momcha-text-dark">
               Grafik Pemasukan
             </CardTitle>
           </CardHeader>
@@ -374,15 +386,15 @@ export default function ReportsPage() {
                 <p className="text-sm">Belum ada data pemasukan</p>
               </div>
             ) : (
-              <ResponsiveContainer width="100%" height={300}>
+              <ResponsiveContainer width="100%" height={250}>
                 <LineChart data={revenueChartData}>
                   <CartesianGrid strokeDasharray="3 3" stroke="#F5D5C8" />
                   <XAxis
                     dataKey="dateLabel"
-                    tick={{ fill: "#5C4033", fontSize: 12 }}
+                    tick={{ fill: "#5C4033", fontSize: 11 }}
                   />
                   <YAxis
-                    tick={{ fill: "#5C4033", fontSize: 12 }}
+                    tick={{ fill: "#5C4033", fontSize: 11 }}
                     tickFormatter={(value) => `${(value / 1000).toFixed(0)}k`}
                   />
                   <Tooltip
@@ -393,14 +405,14 @@ export default function ReportsPage() {
                       borderRadius: "8px",
                     }}
                   />
-                  <Legend />
+                  <Legend wrapperStyle={{ fontSize: "12px" }} />
                   <Line
                     type="monotone"
                     dataKey="revenue"
                     stroke="#E08B8B"
                     strokeWidth={2}
                     name="Pemasukan"
-                    dot={{ fill: "#E08B8B", r: 4 }}
+                    dot={{ fill: "#E08B8B", r: 3 }}
                   />
                 </LineChart>
               </ResponsiveContainer>
@@ -411,7 +423,7 @@ export default function ReportsPage() {
         {/* Top Services */}
         <Card className="border-momcha-peach">
           <CardHeader>
-            <CardTitle className="text-momcha-text-dark">
+            <CardTitle className="text-base lg:text-lg text-momcha-text-dark">
               Top 5 Layanan
             </CardTitle>
           </CardHeader>
@@ -421,17 +433,17 @@ export default function ReportsPage() {
                 <p className="text-sm">Belum ada data layanan</p>
               </div>
             ) : (
-              <ResponsiveContainer width="100%" height={300}>
+              <ResponsiveContainer width="100%" height={250}>
                 <BarChart data={topServices}>
                   <CartesianGrid strokeDasharray="3 3" stroke="#F5D5C8" />
                   <XAxis
                     dataKey="name"
-                    tick={{ fill: "#5C4033", fontSize: 11 }}
-                    angle={-15}
+                    tick={{ fill: "#5C4033", fontSize: 10 }}
+                    angle={-20}
                     textAnchor="end"
                     height={80}
                   />
-                  <YAxis tick={{ fill: "#5C4033", fontSize: 12 }} />
+                  <YAxis tick={{ fill: "#5C4033", fontSize: 11 }} />
                   <Tooltip
                     contentStyle={{
                       backgroundColor: "#FFF5EE",
@@ -439,7 +451,7 @@ export default function ReportsPage() {
                       borderRadius: "8px",
                     }}
                   />
-                  <Legend />
+                  <Legend wrapperStyle={{ fontSize: "12px" }} />
                   <Bar dataKey="count" fill="#FF9DBD" name="Jumlah Order" />
                 </BarChart>
               </ResponsiveContainer>
@@ -448,12 +460,12 @@ export default function ReportsPage() {
         </Card>
       </div>
 
-      {/* Charts Row 2 */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      {/* Charts Row 2 - Stack on Mobile */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 lg:gap-6">
         {/* Payment Distribution */}
         <Card className="border-momcha-peach">
           <CardHeader>
-            <CardTitle className="text-momcha-text-dark">
+            <CardTitle className="text-base lg:text-lg text-momcha-text-dark">
               Distribusi Status Pembayaran
             </CardTitle>
           </CardHeader>
@@ -463,7 +475,7 @@ export default function ReportsPage() {
                 <p className="text-sm">Belum ada data</p>
               </div>
             ) : (
-              <ResponsiveContainer width="100%" height={300}>
+              <ResponsiveContainer width="100%" height={250}>
                 <PieChart>
                   <Pie
                     data={paymentDistribution}
@@ -473,7 +485,7 @@ export default function ReportsPage() {
                     label={({ name, percent }) =>
                       `${name} (${(percent * 100).toFixed(0)}%)`
                     }
-                    outerRadius={80}
+                    outerRadius={70}
                     fill="#8884d8"
                     dataKey="value"
                   >
@@ -486,6 +498,7 @@ export default function ReportsPage() {
                       backgroundColor: "#FFF5EE",
                       border: "1px solid #F5D5C8",
                       borderRadius: "8px",
+                      fontSize: "12px",
                     }}
                   />
                 </PieChart>
@@ -497,7 +510,7 @@ export default function ReportsPage() {
         {/* Top Customers */}
         <Card className="border-momcha-peach">
           <CardHeader>
-            <CardTitle className="text-momcha-text-dark">
+            <CardTitle className="text-base lg:text-lg text-momcha-text-dark">
               Top 5 Customers
             </CardTitle>
           </CardHeader>
@@ -507,18 +520,18 @@ export default function ReportsPage() {
                 <p className="text-sm">Belum ada data customer</p>
               </div>
             ) : (
-              <div className="space-y-3">
+              <div className="space-y-2 lg:space-y-3">
                 {topCustomers.map((customer, index) => (
                   <div
                     key={customer.id}
-                    className="flex items-center justify-between p-3 bg-momcha-cream rounded-lg hover:bg-momcha-peach transition-colors"
+                    className="flex items-center justify-between p-2 lg:p-3 bg-momcha-cream rounded-lg hover:bg-momcha-peach transition-colors"
                   >
-                    <div className="flex items-center gap-3">
-                      <div className="w-8 h-8 rounded-full bg-momcha-coral text-white flex items-center justify-center text-sm font-bold">
+                    <div className="flex items-center gap-2 lg:gap-3 min-w-0">
+                      <div className="w-7 h-7 lg:w-8 lg:h-8 rounded-full bg-momcha-coral text-white flex items-center justify-center text-xs lg:text-sm font-bold shrink-0">
                         {index + 1}
                       </div>
-                      <div>
-                        <p className="text-sm font-medium text-momcha-text-dark">
+                      <div className="min-w-0">
+                        <p className="text-xs lg:text-sm font-medium text-momcha-text-dark truncate">
                           {customer.name}
                         </p>
                         <p className="text-xs text-momcha-text-light">
@@ -526,8 +539,8 @@ export default function ReportsPage() {
                         </p>
                       </div>
                     </div>
-                    <div className="text-right">
-                      <p className="text-sm font-bold text-momcha-text-dark">
+                    <div className="text-right shrink-0">
+                      <p className="text-xs lg:text-sm font-bold text-momcha-text-dark">
                         {formatCurrency(customer.total_spent || 0)}
                       </p>
                     </div>

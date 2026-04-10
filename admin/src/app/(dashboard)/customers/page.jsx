@@ -157,36 +157,36 @@ export default function CustomersPage() {
   }
 
   return (
-    <div className="space-y-6">
-      {/* Header */}
-      <div className="flex items-center justify-between">
+    <div className="space-y-4 lg:space-y-6">
+      {/* Header - Responsive */}
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
         <div>
-          <h1 className="text-2xl font-bold text-momcha-text-dark">
+          <h1 className="text-xl lg:text-2xl font-bold text-momcha-text-dark">
             Customers
           </h1>
-          <p className="text-momcha-text-light">Kelola data customer</p>
+          <p className="text-sm text-momcha-text-light">Kelola data customer</p>
         </div>
       </div>
 
-      {/* Search */}
+      {/* Search - Responsive */}
       <Card className="border-momcha-peach">
-        <CardContent className="pt-6">
+        <CardContent className="pt-4 lg:pt-6">
           <div className="relative">
             <Search
               className="absolute left-3 top-1/2 -translate-y-1/2 text-momcha-text-light"
               size={18}
             />
             <Input
-              placeholder="Cari customer (nama, HP, email)..."
+              placeholder="Cari customer..."
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              className="pl-10"
+              className="pl-10 text-sm"
             />
           </div>
         </CardContent>
       </Card>
 
-      {/* Customers Table */}
+      {/* Customers - Mobile: Cards, Desktop: Table */}
       <Card className="border-momcha-peach">
         <CardContent className="p-0">
           {loading ? (
@@ -195,139 +195,222 @@ export default function CustomersPage() {
             </div>
           ) : filteredCustomers.length === 0 ? (
             <div className="text-center py-12 text-momcha-text-light">
-              <p>Tidak ada customer yang ditemukan</p>
+              <p className="text-sm">Tidak ada customer yang ditemukan</p>
             </div>
           ) : (
-            <div className="overflow-x-auto">
-              <table className="w-full">
-                <thead className="bg-momcha-cream border-b border-momcha-peach">
-                  <tr>
-                    <th className="text-left px-6 py-3 text-xs font-medium text-momcha-text-dark">
-                      Customer
-                    </th>
-                    <th className="text-left px-6 py-3 text-xs font-medium text-momcha-text-dark">
-                      Kontak
-                    </th>
-                    <th className="text-left px-6 py-3 text-xs font-medium text-momcha-text-dark">
-                      Alamat
-                    </th>
-                    <th className="text-left px-6 py-3 text-xs font-medium text-momcha-text-dark">
-                      Total Orders
-                    </th>
-                    <th className="text-left px-6 py-3 text-xs font-medium text-momcha-text-dark">
-                      Total Spent
-                    </th>
-                    <th className="text-right px-6 py-3 text-xs font-medium text-momcha-text-dark">
-                      Aksi
-                    </th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-momcha-peach">
-                  {filteredCustomers.map((customer) => (
-                    <tr
-                      key={customer.id}
-                      className="hover:bg-momcha-cream transition-colors"
-                    >
-                      <td className="px-6 py-4">
-                        <div className="flex items-center gap-3">
-                          <div className="w-10 h-10 rounded-full bg-momcha-peach flex items-center justify-center">
-                            <User size={18} className="text-momcha-brown" />
-                          </div>
-                          <div>
-                            <p className="text-sm font-medium text-momcha-text-dark">
-                              {customer.name}
-                            </p>
-                            <p className="text-xs text-momcha-text-light">
-                              Bergabung {formatDate(customer.created_at)}
-                            </p>
-                          </div>
+            <>
+              {/* MOBILE VIEW - Cards */}
+              <div className="lg:hidden divide-y divide-momcha-peach">
+                {filteredCustomers.map((customer) => (
+                  <div key={customer.id} className="p-4 space-y-3">
+                    {/* Header */}
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="flex items-center gap-3 flex-1 min-w-0">
+                        <div className="w-10 h-10 rounded-full bg-momcha-peach flex items-center justify-center shrink-0">
+                          <User size={18} className="text-momcha-brown" />
                         </div>
-                      </td>
-                      <td className="px-6 py-4">
-                        <div className="space-y-1">
-                          <div className="flex items-center gap-2 text-sm text-momcha-text-dark">
-                            <Phone
-                              size={14}
-                              className="text-momcha-text-light"
-                            />
-                            {customer.phone}
-                          </div>
-                          {customer.email && (
-                            <div className="flex items-center gap-2 text-sm text-momcha-text-light">
-                              <Mail size={14} />
-                              {customer.email}
-                            </div>
-                          )}
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm font-medium text-momcha-text-dark truncate">
+                            {customer.name}
+                          </p>
+                          <p className="text-xs text-momcha-text-light">
+                            {formatDate(customer.created_at)}
+                          </p>
                         </div>
-                      </td>
-                      <td className="px-6 py-4">
-                        {customer.address ? (
-                          <div className="flex items-start gap-2 text-sm text-momcha-text-light max-w-xs">
-                            <MapPin size={14} className="mt-0.5 shrink-0" />
-                            <span className="line-clamp-2">
-                              {customer.address}
-                            </span>
-                          </div>
-                        ) : (
-                          <span className="text-sm text-momcha-text-light">
-                            -
-                          </span>
-                        )}
-                      </td>
-                      <td className="px-6 py-4">
-                        <div className="flex items-center gap-2 text-sm text-momcha-text-dark">
-                          <ShoppingBag
-                            size={14}
-                            className="text-momcha-text-light"
-                          />
-                          {customer.total_orders || 0} orders
-                        </div>
-                      </td>
-                      <td className="px-6 py-4">
-                        <div className="flex items-center gap-2 text-sm font-medium text-momcha-text-dark">
-                          <DollarSign size={14} className="text-green-600" />
-                          {formatCurrency(customer.total_spent || 0)}
-                        </div>
-                      </td>
-                      <td className="px-6 py-4">
-                        <div className="flex items-center justify-end gap-2">
-                          {/* Edit */}
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => openEditModal(customer)}
-                            className="text-blue-600 hover:bg-blue-50"
-                          >
-                            <Edit size={16} />
-                          </Button>
+                      </div>
 
-                          {/* Delete */}
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => openDeleteModal(customer)}
-                            className="text-red-600 hover:bg-red-50"
-                          >
-                            <Trash2 size={16} />
-                          </Button>
+                      {/* Actions */}
+                      <div className="flex items-center gap-1 shrink-0">
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => openEditModal(customer)}
+                          className="text-blue-600 hover:bg-blue-50 h-8 w-8 p-0"
+                        >
+                          <Edit size={14} />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => openDeleteModal(customer)}
+                          className="text-red-600 hover:bg-red-50 h-8 w-8 p-0"
+                        >
+                          <Trash2 size={14} />
+                        </Button>
+                      </div>
+                    </div>
+
+                    {/* Contact Info */}
+                    <div className="space-y-1.5 text-sm">
+                      <div className="flex items-center gap-2 text-momcha-text-dark">
+                        <Phone
+                          size={14}
+                          className="text-momcha-text-light shrink-0"
+                        />
+                        <span className="truncate">{customer.phone}</span>
+                      </div>
+                      {customer.email && (
+                        <div className="flex items-center gap-2 text-momcha-text-light">
+                          <Mail size={14} className="shrink-0" />
+                          <span className="truncate">{customer.email}</span>
                         </div>
-                      </td>
+                      )}
+                      {customer.address && (
+                        <div className="flex items-start gap-2 text-momcha-text-light">
+                          <MapPin size={14} className="mt-0.5 shrink-0" />
+                          <span className="text-xs line-clamp-2">
+                            {customer.address}
+                          </span>
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Stats */}
+                    <div className="flex items-center justify-between pt-2 border-t border-momcha-peach">
+                      <div className="flex items-center gap-1.5 text-xs text-momcha-text-dark">
+                        <ShoppingBag
+                          size={12}
+                          className="text-momcha-text-light shrink-0"
+                        />
+                        <span>{customer.total_orders || 0} orders</span>
+                      </div>
+                      <div className="flex items-center gap-1.5 text-xs font-medium text-momcha-text-dark">
+                        <DollarSign size={12} className="text-green-600" />
+                        <span>{formatCurrency(customer.total_spent || 0)}</span>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              {/* DESKTOP VIEW - Table */}
+              <div className="hidden lg:block overflow-x-auto">
+                <table className="w-full">
+                  <thead className="bg-momcha-cream border-b border-momcha-peach">
+                    <tr>
+                      <th className="text-left px-6 py-3 text-xs font-medium text-momcha-text-dark">
+                        Customer
+                      </th>
+                      <th className="text-left px-6 py-3 text-xs font-medium text-momcha-text-dark">
+                        Kontak
+                      </th>
+                      <th className="text-left px-6 py-3 text-xs font-medium text-momcha-text-dark">
+                        Alamat
+                      </th>
+                      <th className="text-left px-6 py-3 text-xs font-medium text-momcha-text-dark">
+                        Total Orders
+                      </th>
+                      <th className="text-left px-6 py-3 text-xs font-medium text-momcha-text-dark">
+                        Total Spent
+                      </th>
+                      <th className="text-right px-6 py-3 text-xs font-medium text-momcha-text-dark">
+                        Aksi
+                      </th>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+                  </thead>
+                  <tbody className="divide-y divide-momcha-peach">
+                    {filteredCustomers.map((customer) => (
+                      <tr
+                        key={customer.id}
+                        className="hover:bg-momcha-cream transition-colors"
+                      >
+                        <td className="px-6 py-4">
+                          <div className="flex items-center gap-3">
+                            <div className="w-10 h-10 rounded-full bg-momcha-peach flex items-center justify-center shrink-0">
+                              <User size={18} className="text-momcha-brown" />
+                            </div>
+                            <div>
+                              <p className="text-sm font-medium text-momcha-text-dark">
+                                {customer.name}
+                              </p>
+                              <p className="text-xs text-momcha-text-light">
+                                Bergabung {formatDate(customer.created_at)}
+                              </p>
+                            </div>
+                          </div>
+                        </td>
+                        <td className="px-6 py-4">
+                          <div className="space-y-1">
+                            <div className="flex items-center gap-2 text-sm text-momcha-text-dark">
+                              <Phone
+                                size={14}
+                                className="text-momcha-text-light shrink-0"
+                              />
+                              {customer.phone}
+                            </div>
+                            {customer.email && (
+                              <div className="flex items-center gap-2 text-sm text-momcha-text-light">
+                                <Mail size={14} />
+                                {customer.email}
+                              </div>
+                            )}
+                          </div>
+                        </td>
+                        <td className="px-6 py-4">
+                          {customer.address ? (
+                            <div className="flex items-start gap-2 text-sm text-momcha-text-light max-w-xs">
+                              <MapPin size={14} className="mt-0.5 shrink-0" />
+                              <span className="line-clamp-2">
+                                {customer.address}
+                              </span>
+                            </div>
+                          ) : (
+                            <span className="text-sm text-momcha-text-light">
+                              -
+                            </span>
+                          )}
+                        </td>
+                        <td className="px-6 py-4">
+                          <div className="flex items-center gap-2 text-sm text-momcha-text-dark">
+                            <ShoppingBag
+                              size={14}
+                              className="text-momcha-text-light shrink-0"
+                            />
+                            {customer.total_orders || 0} orders
+                          </div>
+                        </td>
+                        <td className="px-6 py-4">
+                          <div className="flex items-center gap-2 text-sm font-medium text-momcha-text-dark">
+                            <DollarSign size={14} className="text-green-600" />
+                            {formatCurrency(customer.total_spent || 0)}
+                          </div>
+                        </td>
+                        <td className="px-6 py-4">
+                          <div className="flex items-center justify-end gap-2">
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => openEditModal(customer)}
+                              className="text-blue-600 hover:bg-blue-50"
+                            >
+                              <Edit size={16} />
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => openDeleteModal(customer)}
+                              className="text-red-600 hover:bg-red-50"
+                            >
+                              <Trash2 size={16} />
+                            </Button>
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </>
           )}
         </CardContent>
       </Card>
 
-      {/* Pagination */}
+      {/* Pagination - Responsive */}
       {!loading && totalPages > 1 && (
-        <div className="flex items-center justify-between">
-          <p className="text-sm text-momcha-text-light">
-            Menampilkan {(page - 1) * limit + 1} -{" "}
-            {Math.min(page * limit, totalCustomers)} dari {totalCustomers}{" "}
-            customers
+        <div className="flex flex-col sm:flex-row items-center justify-between gap-3">
+          <p className="text-xs sm:text-sm text-momcha-text-light">
+            {(page - 1) * limit + 1} - {Math.min(page * limit, totalCustomers)}{" "}
+            dari {totalCustomers}
           </p>
 
           <div className="flex items-center gap-2">
@@ -336,8 +419,9 @@ export default function CustomersPage() {
               size="sm"
               onClick={() => setPage((p) => Math.max(1, p - 1))}
               disabled={page === 1}
+              className="text-xs"
             >
-              Previous
+              Prev
             </Button>
 
             <div className="flex items-center gap-1">
@@ -354,18 +438,21 @@ export default function CustomersPage() {
                       variant={page === pageNum ? "default" : "outline"}
                       size="sm"
                       onClick={() => setPage(pageNum)}
-                      className={
+                      className={`h-8 w-8 p-0 text-xs ${
                         page === pageNum
                           ? "bg-momcha-coral hover:bg-momcha-brown text-white"
                           : ""
-                      }
+                      }`}
                     >
                       {pageNum}
                     </Button>
                   );
                 } else if (pageNum === page - 2 || pageNum === page + 2) {
                   return (
-                    <span key={pageNum} className="px-2 text-momcha-text-light">
+                    <span
+                      key={pageNum}
+                      className="px-1 text-xs text-momcha-text-light"
+                    >
                       ...
                     </span>
                   );
@@ -379,6 +466,7 @@ export default function CustomersPage() {
               size="sm"
               onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
               disabled={page === totalPages}
+              className="text-xs"
             >
               Next
             </Button>
@@ -386,17 +474,21 @@ export default function CustomersPage() {
         </div>
       )}
 
-      {/* Edit Modal */}
+      {/* Edit Modal - Responsive */}
       <Dialog open={showEditModal} onOpenChange={setShowEditModal}>
-        <DialogContent>
+        <DialogContent className="max-w-md w-[calc(100%-2rem)] sm:w-full">
           <DialogHeader>
-            <DialogTitle>Edit Customer</DialogTitle>
-            <DialogDescription>Update informasi customer</DialogDescription>
+            <DialogTitle className="text-base sm:text-lg">
+              Edit Customer
+            </DialogTitle>
+            <DialogDescription className="text-xs sm:text-sm">
+              Update informasi customer
+            </DialogDescription>
           </DialogHeader>
 
-          <div className="space-y-4 py-4">
-            <div className="space-y-2">
-              <label className="text-sm font-medium">
+          <div className="space-y-3 sm:space-y-4 py-2 sm:py-4 max-h-[60vh] overflow-y-auto">
+            <div className="space-y-1.5">
+              <label className="text-xs sm:text-sm font-medium">
                 Nama <span className="text-red-500">*</span>
               </label>
               <Input
@@ -405,11 +497,12 @@ export default function CustomersPage() {
                 onChange={(e) =>
                   setFormData({ ...formData, name: e.target.value })
                 }
+                className="text-sm h-10"
               />
             </div>
 
-            <div className="space-y-2">
-              <label className="text-sm font-medium">
+            <div className="space-y-1.5">
+              <label className="text-xs sm:text-sm font-medium">
                 Nomor HP <span className="text-red-500">*</span>
               </label>
               <Input
@@ -419,11 +512,12 @@ export default function CustomersPage() {
                 onChange={(e) =>
                   setFormData({ ...formData, phone: e.target.value })
                 }
+                className="text-sm h-10"
               />
             </div>
 
-            <div className="space-y-2">
-              <label className="text-sm font-medium">Email</label>
+            <div className="space-y-1.5">
+              <label className="text-xs sm:text-sm font-medium">Email</label>
               <Input
                 type="email"
                 placeholder="email@example.com"
@@ -431,13 +525,14 @@ export default function CustomersPage() {
                 onChange={(e) =>
                   setFormData({ ...formData, email: e.target.value })
                 }
+                className="text-sm h-10"
               />
             </div>
 
-            <div className="space-y-2">
-              <label className="text-sm font-medium">Alamat</label>
+            <div className="space-y-1.5">
+              <label className="text-xs sm:text-sm font-medium">Alamat</label>
               <textarea
-                className="w-full px-3 py-2 border rounded-lg text-sm resize-none"
+                className="w-full px-3 py-2 border rounded-lg text-sm resize-none focus:outline-none focus:ring-2 focus:ring-momcha-coral"
                 rows="3"
                 placeholder="Alamat lengkap"
                 value={formData.address}
@@ -448,22 +543,23 @@ export default function CustomersPage() {
             </div>
           </div>
 
-          <DialogFooter>
+          <DialogFooter className="gap-2 sm:gap-0">
             <Button
               variant="outline"
               onClick={() => setShowEditModal(false)}
               disabled={actionLoading}
+              className="text-sm h-9"
             >
               Batal
             </Button>
             <Button
               onClick={handleUpdate}
               disabled={actionLoading}
-              className="bg-momcha-coral hover:bg-momcha-brown"
+              className="bg-momcha-coral hover:bg-momcha-brown text-sm h-9"
             >
               {actionLoading ? (
                 <>
-                  <Loader2 size={16} className="mr-2 animate-spin" />
+                  <Loader2 size={14} className="mr-2 animate-spin" />
                   Menyimpan...
                 </>
               ) : (
@@ -474,21 +570,23 @@ export default function CustomersPage() {
         </DialogContent>
       </Dialog>
 
-      {/* Delete Modal */}
+      {/* Delete Modal - Responsive */}
       <Dialog open={showDeleteModal} onOpenChange={setShowDeleteModal}>
-        <DialogContent>
+        <DialogContent className="max-w-md w-[calc(100%-2rem)] sm:w-full">
           <DialogHeader>
-            <DialogTitle>Hapus Customer</DialogTitle>
-            <DialogDescription>
+            <DialogTitle className="text-base sm:text-lg">
+              Hapus Customer
+            </DialogTitle>
+            <DialogDescription className="text-xs sm:text-sm">
               Customer yang dihapus tidak dapat dikembalikan
             </DialogDescription>
           </DialogHeader>
 
-          <div className="py-4">
-            <div className="flex items-center gap-3 p-4 bg-red-50 rounded-lg">
-              <Trash2 className="text-red-600" size={24} />
-              <div>
-                <p className="text-sm font-medium text-red-900">
+          <div className="py-2 sm:py-4">
+            <div className="flex items-center gap-3 p-3 sm:p-4 bg-red-50 rounded-lg">
+              <Trash2 className="text-red-600 shrink-0" size={20} />
+              <div className="min-w-0 flex-1">
+                <p className="text-xs sm:text-sm font-medium text-red-900 truncate">
                   {selectedCustomer?.name}
                 </p>
                 <p className="text-xs text-red-700">
@@ -496,33 +594,34 @@ export default function CustomersPage() {
                 </p>
               </div>
             </div>
-            <p className="text-sm text-momcha-text-light mt-4">
+            <p className="text-xs sm:text-sm text-momcha-text-light mt-3 sm:mt-4">
               ⚠️ Customer yang memiliki order aktif tidak bisa dihapus
             </p>
           </div>
 
-          <DialogFooter>
+          <DialogFooter className="gap-2 sm:gap-0">
             <Button
               variant="outline"
               onClick={() => setShowDeleteModal(false)}
               disabled={actionLoading}
+              className="text-sm h-9"
             >
               Batal
             </Button>
             <Button
               onClick={handleDelete}
               disabled={actionLoading}
-              className="bg-red-600 hover:bg-red-700 text-white"
+              className="bg-red-600 hover:bg-red-700 text-white text-sm h-9"
             >
               {actionLoading ? (
                 <>
-                  <Loader2 size={16} className="mr-2 animate-spin" />
+                  <Loader2 size={14} className="mr-2 animate-spin" />
                   Menghapus...
                 </>
               ) : (
                 <>
-                  <Trash2 size={16} className="mr-2" />
-                  Ya, Hapus Customer
+                  <Trash2 size={14} className="mr-2" />
+                  Ya, Hapus
                 </>
               )}
             </Button>
