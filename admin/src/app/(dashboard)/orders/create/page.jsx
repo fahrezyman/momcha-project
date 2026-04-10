@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { api } from "@/lib/api";
 import { formatCurrency } from "@/constants";
@@ -14,7 +14,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { ArrowLeft, Plus, Trash2, Loader2, Check } from "lucide-react";
+import { ArrowLeft, Plus, Trash2, Loader2, Check, User } from "lucide-react";
 import Link from "next/link";
 import { toast } from "sonner";
 
@@ -44,9 +44,70 @@ export default function CreateOrderPage() {
   const [showSuccessModal, setShowSuccessModal] = useState(false);
   const [createdOrder, setCreatedOrder] = useState(null);
 
+  // Customer search
+  const [customerSearch, setCustomerSearch] = useState("");
+  const [customerSuggestions, setCustomerSuggestions] = useState([]);
+  const [showSuggestions, setShowSuggestions] = useState(false);
+  const [searchingCustomer, setSearchingCustomer] = useState(false);
+  const searchTimeout = useRef(null);
+  const suggestionsRef = useRef(null);
+
   useEffect(() => {
     loadServices();
   }, []);
+
+  // Close suggestions when clicking outside
+  useEffect(() => {
+    function handleClickOutside(e) {
+      if (suggestionsRef.current && !suggestionsRef.current.contains(e.target)) {
+        setShowSuggestions(false);
+      }
+    }
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
+  function handleCustomerSearchChange(value) {
+    setCustomerSearch(value);
+    setFormData({ ...formData, customer_name: value });
+
+    clearTimeout(searchTimeout.current);
+    if (value.length < 2) {
+      setCustomerSuggestions([]);
+      setShowSuggestions(false);
+      return;
+    }
+
+    searchTimeout.current = setTimeout(async () => {
+      try {
+        setSearchingCustomer(true);
+        const res = await api.getCustomers(`?search=${encodeURIComponent(value)}&limit=5`);
+        if (res.success && res.data.length > 0) {
+          setCustomerSuggestions(res.data);
+          setShowSuggestions(true);
+        } else {
+          setCustomerSuggestions([]);
+          setShowSuggestions(false);
+        }
+      } catch {
+        // silently fail
+      } finally {
+        setSearchingCustomer(false);
+      }
+    }, 300);
+  }
+
+  function selectCustomer(customer) {
+    setFormData({
+      ...formData,
+      customer_name: customer.name,
+      customer_phone: customer.phone,
+      customer_email: customer.email || "",
+      customer_address: customer.address || "",
+    });
+    setCustomerSearch(customer.name);
+    setShowSuggestions(false);
+  }
 
   async function loadServices() {
     try {
@@ -222,14 +283,39 @@ export default function CreateOrderPage() {
                 <label className="text-sm font-medium">
                   Nama Lengkap <span className="text-red-500">*</span>
                 </label>
-                <Input
-                  placeholder="Nama customer"
-                  value={formData.customer_name}
-                  onChange={(e) =>
-                    setFormData({ ...formData, customer_name: e.target.value })
-                  }
-                  required
-                />
+                <div className="relative" ref={suggestionsRef}>
+                  <Input
+                    placeholder="Ketik nama atau cari customer lama..."
+                    value={customerSearch || formData.customer_name}
+                    onChange={(e) => handleCustomerSearchChange(e.target.value)}
+                    onFocus={() => customerSuggestions.length > 0 && setShowSuggestions(true)}
+                    autoComplete="off"
+                    required
+                  />
+                  {searchingCustomer && (
+                    <Loader2 size={14} className="absolute right-3 top-1/2 -translate-y-1/2 animate-spin text-momcha-text-light" />
+                  )}
+                  {showSuggestions && customerSuggestions.length > 0 && (
+                    <div className="absolute z-50 w-full mt-1 bg-white border border-momcha-peach rounded-lg shadow-lg overflow-hidden">
+                      {customerSuggestions.map((customer) => (
+                        <button
+                          key={customer.id}
+                          type="button"
+                          onClick={() => selectCustomer(customer)}
+                          className="w-full flex items-center gap-3 px-4 py-3 hover:bg-momcha-cream text-left transition-colors border-b border-momcha-peach last:border-0"
+                        >
+                          <div className="w-8 h-8 rounded-full bg-momcha-peach flex items-center justify-center shrink-0">
+                            <User size={14} className="text-momcha-brown" />
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <p className="text-sm font-medium text-momcha-text-dark truncate">{customer.name}</p>
+                            <p className="text-xs text-momcha-text-light">{customer.phone}</p>
+                          </div>
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </div>
               </div>
 
               <div className="space-y-2">
