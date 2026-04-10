@@ -74,9 +74,11 @@ export default function DashboardPage() {
         });
 
         setTodaySchedule(
-          todayOrders.sort((a, b) =>
-            a.service_start_time.localeCompare(b.service_start_time),
-          ),
+          todayOrders
+            .filter((o) => o.status !== "completed" && o.status !== "cancelled")
+            .sort((a, b) =>
+              a.service_start_time.localeCompare(b.service_start_time),
+            ),
         );
 
         setRecentOrders(
