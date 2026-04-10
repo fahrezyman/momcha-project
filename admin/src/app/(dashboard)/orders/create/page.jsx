@@ -30,7 +30,7 @@ export default function CreateOrderPage() {
     customer_phone: "",
     customer_email: "",
     customer_address: "",
-    service_date: "",
+    service_date: new Date().toISOString().split("T")[0],
     service_start_time: "",
     notes: "",
   });
