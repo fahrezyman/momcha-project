@@ -8,13 +8,15 @@ import {
   formatTime,
   ORDER_STATUS,
   PAYMENT_STATUS,
+  STATUS_BADGE_COLORS,
 } from "@/constants";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Plus, Search, ChevronLeft, ChevronRight } from "lucide-react";
+import { Plus, Search } from "lucide-react";
 import Link from "next/link";
+import { Pagination } from "@/components/ui/Pagination";
 
 export default function OrdersPage() {
   const [orders, setOrders] = useState([]);
@@ -75,34 +77,17 @@ export default function OrdersPage() {
 
   function getStatusBadge(status) {
     const statusData = ORDER_STATUS[status] || { label: status, color: "gray" };
-    const colors = {
-      yellow: "bg-yellow-100 text-yellow-700",
-      blue: "bg-blue-100 text-blue-700",
-      green: "bg-green-100 text-green-700",
-      red: "bg-red-100 text-red-700",
-      gray: "bg-gray-100 text-gray-700",
-    };
     return (
-      <Badge className={`${colors[statusData.color]} border-0`}>
+      <Badge className={`${STATUS_BADGE_COLORS[statusData.color]} border-0`}>
         {statusData.label}
       </Badge>
     );
   }
 
   function getPaymentBadge(status) {
-    const statusData = PAYMENT_STATUS[status] || {
-      label: status,
-      color: "gray",
-    };
-    const colors = {
-      yellow: "bg-yellow-100 text-yellow-700",
-      green: "bg-green-100 text-green-700",
-      red: "bg-red-100 text-red-700",
-      gray: "bg-gray-100 text-gray-700",
-      blue: "bg-blue-100 text-blue-700",
-    };
+    const statusData = PAYMENT_STATUS[status] || { label: status, color: "gray" };
     return (
-      <Badge className={`${colors[statusData.color]} border-0`}>
+      <Badge className={`${STATUS_BADGE_COLORS[statusData.color]} border-0`}>
         {statusData.label}
       </Badge>
     );
@@ -314,67 +299,11 @@ export default function OrdersPage() {
             {Math.min(currentPage * limit, totalOrders)} dari {totalOrders}{" "}
             orders
           </p>
-
-          <div className="flex items-center gap-2">
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
-              disabled={currentPage === 1}
-            >
-              <ChevronLeft size={16} className="mr-1" />
-              Previous
-            </Button>
-
-            <div className="flex items-center gap-1">
-              {[...Array(totalPages)].map((_, i) => {
-                const page = i + 1;
-
-                // Show first page, last page, current page, and ±1 from current
-                if (
-                  page === 1 ||
-                  page === totalPages ||
-                  (page >= currentPage - 1 && page <= currentPage + 1)
-                ) {
-                  return (
-                    <Button
-                      key={page}
-                      variant={currentPage === page ? "default" : "outline"}
-                      size="sm"
-                      onClick={() => setCurrentPage(page)}
-                      className={
-                        currentPage === page
-                          ? "bg-momcha-coral hover:bg-momcha-brown text-white"
-                          : ""
-                      }
-                    >
-                      {page}
-                    </Button>
-                  );
-                } else if (
-                  page === currentPage - 2 ||
-                  page === currentPage + 2
-                ) {
-                  return (
-                    <span key={page} className="px-2 text-momcha-text-light">
-                      ...
-                    </span>
-                  );
-                }
-                return null;
-              })}
-            </div>
-
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
-              disabled={currentPage === totalPages}
-            >
-              Next
-              <ChevronRight size={16} className="ml-1" />
-            </Button>
-          </div>
+          <Pagination
+            currentPage={currentPage}
+            totalPages={totalPages}
+            onPageChange={setCurrentPage}
+          />
         </div>
       )}
     </div>

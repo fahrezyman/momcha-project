@@ -2,6 +2,82 @@ const db = require("../config/db");
 const { generateOrderNumber } = require("../utils/generateOrderNumbers");
 const { createTransaction } = require("../utils/midtrans");
 
+// Fetch service details and calculate totals from an array of { service_id, quantity, custom_price? }
+// allowCustomPrice: only createOrder supports overriding price
+async function resolveServiceDetails(services, allowCustomPrice = false) {
+  let total_amount = 0;
+  let total_duration = 0;
+  const serviceDetails = [];
+
+  for (const svc of services) {
+    const [dbServices] = await db.query(
+      "SELECT * FROM services WHERE id = ? AND is_active = 1",
+      [svc.service_id],
+    );
+
+    if (dbServices.length === 0) {
+      return {
+        error: {
+          code: "SERVICE_NOT_FOUND",
+          message: `Service ID ${svc.service_id} not found or inactive`,
+        },
+      };
+    }
+
+    const service = dbServices[0];
+    const quantity = svc.quantity || 1;
+    const price = (allowCustomPrice && svc.custom_price) ? svc.custom_price : service.price;
+    const subtotal = price * quantity;
+
+    total_amount += subtotal;
+    total_duration += service.duration_minutes * quantity;
+
+    serviceDetails.push({
+      service_id: service.id,
+      service_name: service.name,
+      price,
+      duration_minutes: service.duration_minutes,
+      quantity,
+      subtotal,
+    });
+  }
+
+  return { total_amount, total_duration, serviceDetails };
+}
+
+// Check for schedule conflicts on a given date/time/duration.
+// excludeOrderId: pass the current order id when rescheduling to exclude itself.
+async function checkScheduleConflict(date, time, duration, excludeOrderId = null) {
+  let query = `
+    SELECT
+      o.id,
+      o.order_number,
+      o.service_start_time,
+      o.total_duration_minutes,
+      c.name as customer_name
+    FROM orders o
+    JOIN customers c ON o.customer_id = c.id
+    WHERE o.service_date = ?
+      AND o.status NOT IN ('cancelled', 'refunded')
+      AND (
+        (o.service_start_time <= ? AND
+         ADDTIME(o.service_start_time, SEC_TO_TIME(o.total_duration_minutes * 60)) > ?)
+        OR
+        (o.service_start_time < ADDTIME(?, SEC_TO_TIME(? * 60)) AND
+         o.service_start_time >= ?)
+      )
+  `;
+  const params = [date, time, time, time, duration, time];
+
+  if (excludeOrderId !== null) {
+    query += ` AND o.id != ?`;
+    params.push(excludeOrderId);
+  }
+
+  const [conflicts] = await db.query(query, params);
+  return conflicts;
+}
+
 // Get all orders
 async function getAllOrders(req, res) {
   try {
@@ -61,9 +137,11 @@ async function getAllOrders(req, res) {
     query += ` ORDER BY o.created_at DESC`;
 
     // Pagination
-    const offset = (page - 1) * limit;
+    const safePage = Math.max(1, parseInt(page) || 1);
+    const safeLimit = Math.min(100, Math.max(1, parseInt(limit) || 20));
+    const offset = (safePage - 1) * safeLimit;
     query += ` LIMIT ? OFFSET ?`;
-    params.push(parseInt(limit), parseInt(offset));
+    params.push(safeLimit, offset);
 
     const [rows] = await db.query(query, params);
 
@@ -103,8 +181,8 @@ async function getAllOrders(req, res) {
       success: true,
       data: rows,
       pagination: {
-        page: parseInt(page),
-        limit: parseInt(limit),
+        page: safePage,
+        limit: safeLimit,
         total,
       },
     });
@@ -286,75 +364,17 @@ async function createOrder(req, res) {
     }
 
     // Get service details & calculate totals
-    let total_amount = 0;
-    let total_duration = 0;
-    const serviceDetails = [];
-
-    for (const svc of services) {
-      const [dbServices] = await db.query(
-        "SELECT * FROM services WHERE id = ? AND is_active = 1",
-        [svc.service_id],
-      );
-
-      if (dbServices.length === 0) {
-        return res.status(404).json({
-          success: false,
-          error: {
-            code: "SERVICE_NOT_FOUND",
-            message: `Service ID ${svc.service_id} not found or inactive`,
-          },
-        });
-      }
-
-      const service = dbServices[0];
-      const quantity = svc.quantity || 1;
-
-      // Use custom price if provided, otherwise use service price
-      const price = svc.custom_price || service.price;
-      const subtotal = price * quantity;
-
-      total_amount += subtotal;
-      total_duration += service.duration_minutes * quantity;
-
-      serviceDetails.push({
-        service_id: service.id,
-        service_name: service.name,
-        price: price,
-        duration_minutes: service.duration_minutes,
-        quantity,
-        subtotal,
-      });
+    const resolved = await resolveServiceDetails(services, true);
+    if (resolved.error) {
+      return res.status(404).json({ success: false, error: resolved.error });
     }
+    const { total_amount, total_duration, serviceDetails } = resolved;
 
     // Check schedule conflict
-    const [conflicts] = await db.query(
-      `
-      SELECT 
-        o.id,
-        o.order_number,
-        o.service_start_time,
-        o.total_duration_minutes,
-        c.name as customer_name
-      FROM orders o
-      JOIN customers c ON o.customer_id = c.id
-      WHERE o.service_date = ?
-        AND o.status NOT IN ('cancelled', 'refunded')
-        AND (
-          (o.service_start_time <= ? AND 
-           ADDTIME(o.service_start_time, SEC_TO_TIME(o.total_duration_minutes * 60)) > ?)
-          OR
-          (o.service_start_time < ADDTIME(?, SEC_TO_TIME(? * 60)) AND
-           o.service_start_time >= ?)
-        )
-    `,
-      [
-        service_date,
-        service_start_time,
-        service_start_time,
-        service_start_time,
-        total_duration,
-        service_start_time,
-      ],
+    const conflicts = await checkScheduleConflict(
+      service_date,
+      service_start_time,
+      total_duration,
     );
 
     if (conflicts.length > 0) {
@@ -547,42 +567,11 @@ async function updateOrder(req, res) {
     // If services updated
     if (services && services.length > 0) {
       // Recalculate totals
-      let total_amount = 0;
-      let total_duration = 0;
-      const serviceDetails = [];
-
-      for (const svc of services) {
-        const [dbServices] = await db.query(
-          "SELECT * FROM services WHERE id = ? AND is_active = 1",
-          [svc.service_id],
-        );
-
-        if (dbServices.length === 0) {
-          return res.status(404).json({
-            success: false,
-            error: {
-              code: "SERVICE_NOT_FOUND",
-              message: `Service ID ${svc.service_id} not found`,
-            },
-          });
-        }
-
-        const service = dbServices[0];
-        const quantity = svc.quantity || 1;
-        const subtotal = service.price * quantity;
-
-        total_amount += subtotal;
-        total_duration += service.duration_minutes * quantity;
-
-        serviceDetails.push({
-          service_id: service.id,
-          service_name: service.name,
-          price: service.price,
-          duration_minutes: service.duration_minutes,
-          quantity,
-          subtotal,
-        });
+      const resolved = await resolveServiceDetails(services);
+      if (resolved.error) {
+        return res.status(404).json({ success: false, error: resolved.error });
       }
+      const { total_amount, total_duration, serviceDetails } = resolved;
 
       // Delete old services
       await db.query("DELETE FROM order_services WHERE order_id = ?", [id]);
@@ -690,35 +679,12 @@ async function rescheduleOrder(req, res) {
 
     const order = orders[0];
 
-    // Check conflict
-    const [conflicts] = await db.query(
-      `
-      SELECT 
-        o.id,
-        o.order_number,
-        c.name as customer_name
-      FROM orders o
-      JOIN customers c ON o.customer_id = c.id
-      WHERE o.service_date = ?
-        AND o.id != ?
-        AND o.status NOT IN ('cancelled', 'refunded')
-        AND (
-          (o.service_start_time <= ? AND 
-           ADDTIME(o.service_start_time, SEC_TO_TIME(o.total_duration_minutes * 60)) > ?)
-          OR
-          (o.service_start_time < ADDTIME(?, SEC_TO_TIME(? * 60)) AND
-           o.service_start_time >= ?)
-        )
-    `,
-      [
-        new_date,
-        id,
-        new_time,
-        new_time,
-        new_time,
-        order.total_duration_minutes,
-        new_time,
-      ],
+    // Check conflict (exclude current order)
+    const conflicts = await checkScheduleConflict(
+      new_date,
+      new_time,
+      order.total_duration_minutes,
+      id,
     );
 
     if (conflicts.length > 0) {
@@ -872,9 +838,13 @@ async function cancelOrder(req, res) {
 
     const order = orders[0];
 
+    const cancelNotes = reason
+      ? `[Dibatalkan] ${reason}`
+      : "[Dibatalkan]";
+
     await db.query(
-      "UPDATE orders SET status = ?, payment_status = ? WHERE id = ?",
-      ["cancelled", "cancelled", id],
+      "UPDATE orders SET status = ?, payment_status = ?, notes = ? WHERE id = ?",
+      ["cancelled", "cancelled", cancelNotes, id],
     );
 
     res.json({

@@ -53,12 +53,12 @@ export default function DashboardPage() {
         const todayOrders = orders.filter((o) => o.service_date === today);
         const todayRevenue = todayOrders
           .filter((o) => o.payment_status === "paid")
-          .reduce((sum, o) => sum + parseFloat(o.total_amount || 0), 0); // ← FIX: total_amount
+          .reduce((sum, o) => sum + parseFloat(o.total_amount || 0), 0);
 
         const monthOrders = orders.length;
         const monthRevenue = orders
           .filter((o) => o.payment_status === "paid")
-          .reduce((sum, o) => sum + parseFloat(o.total_amount || 0), 0); // ← FIX: total_amount
+          .reduce((sum, o) => sum + parseFloat(o.total_amount || 0), 0);
 
         setSummary({
           todayOrders: todayOrders.length,
@@ -224,12 +224,10 @@ export default function DashboardPage() {
                         {order.customer_name}
                       </p>
                       <p className="text-xs text-momcha-text-light truncate">
-                        {order.services_names || "-"}{" "}
-                        {/* ← FIX: services_names */}
+                        {order.services_names || "-"}
                       </p>
                       <p className="text-xs font-medium text-momcha-coral mt-1">
-                        {formatCurrency(order.total_amount)}{" "}
-                        {/* ← FIX: total_amount */}
+                        {formatCurrency(order.total_amount)}
                       </p>
                     </div>
                     <span
@@ -295,8 +293,7 @@ export default function DashboardPage() {
                           </p>
                         </div>
                         <p className="text-xs font-medium text-momcha-coral">
-                          {formatCurrency(order.total_amount)}{" "}
-                          {/* ← FIX: total_amount */}
+                          {formatCurrency(order.total_amount)}
                         </p>
                       </div>
                       <p className="text-xs text-momcha-text-light mt-1">

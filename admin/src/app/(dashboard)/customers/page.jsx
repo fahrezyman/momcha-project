@@ -29,6 +29,7 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import { toast } from "sonner";
+import { Pagination } from "@/components/ui/Pagination";
 
 export default function CustomersPage() {
   const [customers, setCustomers] = useState([]);
@@ -56,7 +57,8 @@ export default function CustomersPage() {
   const loadCustomers = useCallback(async () => {
     try {
       setLoading(true);
-      const params = `?page=${page}&limit=${limit}`;
+      let params = `?page=${page}&limit=${limit}`;
+      if (search) params += `&search=${encodeURIComponent(search)}`;
       const res = await api.getCustomers(params);
 
       if (res.success) {
@@ -70,22 +72,16 @@ export default function CustomersPage() {
     } finally {
       setLoading(false);
     }
-  }, [page]);
+  }, [page, search]);
 
   useEffect(() => {
     loadCustomers();
   }, [loadCustomers]);
 
-  // Filter by search
-  const filteredCustomers = customers.filter((customer) => {
-    if (!search) return true;
-    const searchLower = search.toLowerCase();
-    return (
-      customer.name.toLowerCase().includes(searchLower) ||
-      customer.phone.includes(searchLower) ||
-      customer.email?.toLowerCase().includes(searchLower)
-    );
-  });
+  // Reset to page 1 when search changes
+  useEffect(() => {
+    setPage(1);
+  }, [search]);
 
   // Open Edit Modal
   function openEditModal(customer) {
@@ -193,7 +189,7 @@ export default function CustomersPage() {
             <div className="flex items-center justify-center py-12">
               <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-momcha-coral" />
             </div>
-          ) : filteredCustomers.length === 0 ? (
+          ) : customers.length === 0 ? (
             <div className="text-center py-12 text-momcha-text-light">
               <p>Tidak ada customer yang ditemukan</p>
             </div>
@@ -223,7 +219,7 @@ export default function CustomersPage() {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-momcha-peach">
-                  {filteredCustomers.map((customer) => (
+                  {customers.map((customer) => (
                     <tr
                       key={customer.id}
                       className="hover:bg-momcha-cream transition-colors"
@@ -329,60 +325,11 @@ export default function CustomersPage() {
             {Math.min(page * limit, totalCustomers)} dari {totalCustomers}{" "}
             customers
           </p>
-
-          <div className="flex items-center gap-2">
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => setPage((p) => Math.max(1, p - 1))}
-              disabled={page === 1}
-            >
-              Previous
-            </Button>
-
-            <div className="flex items-center gap-1">
-              {[...Array(totalPages)].map((_, i) => {
-                const pageNum = i + 1;
-                if (
-                  pageNum === 1 ||
-                  pageNum === totalPages ||
-                  (pageNum >= page - 1 && pageNum <= page + 1)
-                ) {
-                  return (
-                    <Button
-                      key={pageNum}
-                      variant={page === pageNum ? "default" : "outline"}
-                      size="sm"
-                      onClick={() => setPage(pageNum)}
-                      className={
-                        page === pageNum
-                          ? "bg-momcha-coral hover:bg-momcha-brown text-white"
-                          : ""
-                      }
-                    >
-                      {pageNum}
-                    </Button>
-                  );
-                } else if (pageNum === page - 2 || pageNum === page + 2) {
-                  return (
-                    <span key={pageNum} className="px-2 text-momcha-text-light">
-                      ...
-                    </span>
-                  );
-                }
-                return null;
-              })}
-            </div>
-
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
-              disabled={page === totalPages}
-            >
-              Next
-            </Button>
-          </div>
+          <Pagination
+            currentPage={page}
+            totalPages={totalPages}
+            onPageChange={setPage}
+          />
         </div>
       )}
 

@@ -87,7 +87,7 @@ function verifySignature(notification) {
 
   const { order_id, status_code, gross_amount, signature_key } = notification;
 
-  const serverKey = process.env.MIDTRANS_SERVER_KEY;
+  const serverKey = process.env.MIDTRANS_SERVER_KEY_DEV;
 
   // Create signature
   const hash = crypto
