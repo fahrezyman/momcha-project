@@ -218,8 +218,9 @@ export default function DashboardPage() {
             ) : (
               <div className="space-y-2 lg:space-y-3">
                 {todaySchedule.map((order) => (
-                  <div
+                  <Link
                     key={order.id}
+                    href={`/orders/${order.id}`}
                     className="flex items-start gap-2 lg:gap-3 p-2 lg:p-3 rounded-lg bg-momcha-cream hover:bg-momcha-peach transition-colors"
                   >
                     <div className="shrink-0 w-10 h-10 lg:w-12 lg:h-12 rounded-lg bg-momcha-coral flex flex-col items-center justify-center text-white">
@@ -250,7 +251,7 @@ export default function DashboardPage() {
                     >
                       {order.payment_status === "paid" ? "Lunas" : "Pending"}
                     </span>
-                  </div>
+                  </Link>
                 ))}
               </div>
             )}
