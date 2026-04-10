@@ -203,22 +203,12 @@ export default function DashboardPage() {
                 <Calendar size={18} className="text-momcha-coral" />
                 Jadwal Hari Ini
               </CardTitle>
-              <div className="flex items-center gap-3">
-                <div className="flex items-center gap-2">
-                  <span className="w-3 h-3 rounded-sm bg-blue-400 shrink-0" />
-                  <span className="text-xs text-momcha-text-light">Lunas</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <span className="w-3 h-3 rounded-sm bg-yellow-400 shrink-0" />
-                  <span className="text-xs text-momcha-text-light">Belum Bayar</span>
-                </div>
-                <Link
-                  href="/calendar"
-                  className="text-xs text-momcha-coral hover:underline"
-                >
-                  Lihat Semua
-                </Link>
-              </div>
+              <Link
+                href="/calendar"
+                className="text-xs text-momcha-coral hover:underline"
+              >
+                Lihat Semua
+              </Link>
             </div>
           </CardHeader>
           <CardContent>
