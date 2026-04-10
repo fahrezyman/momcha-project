@@ -35,10 +35,10 @@ export default function ServicesPage() {
   // Modal states
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
-  const [showToggleModal, setShowToggleModal] = useState(false); // ← TAMBAH
-  const [showDeleteModal, setShowDeleteModal] = useState(false); // ← TAMBAH
+  const [showToggleModal, setShowToggleModal] = useState(false);
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [editingService, setEditingService] = useState(null);
-  const [selectedService, setSelectedService] = useState(null); // ← TAMBAH
+  const [selectedService, setSelectedService] = useState(null);
   const [actionLoading, setActionLoading] = useState(false);
 
   // Form data
@@ -369,7 +369,7 @@ export default function ServicesPage() {
                           <Button
                             variant="ghost"
                             size="sm"
-                            onClick={() => openToggleModal(service)} // ← GANTI
+                            onClick={() => openToggleModal(service)}
                             className={
                               service.is_active
                                 ? "text-yellow-600 hover:bg-yellow-50"
@@ -383,7 +383,7 @@ export default function ServicesPage() {
                           <Button
                             variant="ghost"
                             size="sm"
-                            onClick={() => openDeleteModal(service)} // ← GANTI
+                            onClick={() => openDeleteModal(service)}
                             className="text-red-600 hover:bg-red-50"
                           >
                             <Trash2 size={16} />

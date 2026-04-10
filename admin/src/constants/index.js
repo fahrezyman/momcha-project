@@ -36,6 +36,15 @@ export function formatTime(time) {
   return time.substring(0, 5); // HH:MM
 }
 
+// Color classes for status badges, keyed by color name in ORDER_STATUS / PAYMENT_STATUS
+export const STATUS_BADGE_COLORS = {
+  yellow: "bg-yellow-100 text-yellow-700",
+  blue: "bg-blue-100 text-blue-700",
+  green: "bg-green-100 text-green-700",
+  red: "bg-red-100 text-red-700",
+  gray: "bg-gray-100 text-gray-700",
+};
+
 export function formatDateTime(datetime) {
   if (!datetime) return "-";
   return new Intl.DateTimeFormat("id-ID", {
