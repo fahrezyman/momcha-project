@@ -8,6 +8,7 @@ import {
   formatTime,
   ORDER_STATUS,
   PAYMENT_STATUS,
+  STATUS_BADGE_COLORS,
 } from "@/constants";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -79,34 +80,17 @@ export default function OrdersPage() {
 
   function getStatusBadge(status) {
     const statusData = ORDER_STATUS[status] || { label: status, color: "gray" };
-    const colors = {
-      yellow: "bg-yellow-100 text-yellow-700",
-      blue: "bg-blue-100 text-blue-700",
-      green: "bg-green-100 text-green-700",
-      red: "bg-red-100 text-red-700",
-      gray: "bg-gray-100 text-gray-700",
-    };
     return (
-      <Badge className={`${colors[statusData.color]} border-0 text-xs`}>
+      <Badge className={`${STATUS_BADGE_COLORS[statusData.color]} border-0 text-xs`}>
         {statusData.label}
       </Badge>
     );
   }
 
   function getPaymentBadge(status) {
-    const statusData = PAYMENT_STATUS[status] || {
-      label: status,
-      color: "gray",
-    };
-    const colors = {
-      yellow: "bg-yellow-100 text-yellow-700",
-      green: "bg-green-100 text-green-700",
-      red: "bg-red-100 text-red-700",
-      gray: "bg-gray-100 text-gray-700",
-      blue: "bg-blue-100 text-blue-700",
-    };
+    const statusData = PAYMENT_STATUS[status] || { label: status, color: "gray" };
     return (
-      <Badge className={`${colors[statusData.color]} border-0 text-xs`}>
+      <Badge className={`${STATUS_BADGE_COLORS[statusData.color]} border-0 text-xs`}>
         {statusData.label}
       </Badge>
     );

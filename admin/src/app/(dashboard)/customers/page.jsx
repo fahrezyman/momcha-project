@@ -56,7 +56,8 @@ export default function CustomersPage() {
   const loadCustomers = useCallback(async () => {
     try {
       setLoading(true);
-      const params = `?page=${page}&limit=${limit}`;
+      let params = `?page=${page}&limit=${limit}`;
+      if (search) params += `&search=${encodeURIComponent(search)}`;
       const res = await api.getCustomers(params);
 
       if (res.success) {
@@ -70,22 +71,16 @@ export default function CustomersPage() {
     } finally {
       setLoading(false);
     }
-  }, [page]);
+  }, [page, search]);
 
   useEffect(() => {
     loadCustomers();
   }, [loadCustomers]);
 
-  // Filter by search
-  const filteredCustomers = customers.filter((customer) => {
-    if (!search) return true;
-    const searchLower = search.toLowerCase();
-    return (
-      customer.name.toLowerCase().includes(searchLower) ||
-      customer.phone.includes(searchLower) ||
-      customer.email?.toLowerCase().includes(searchLower)
-    );
-  });
+  // Reset to page 1 when search changes
+  useEffect(() => {
+    setPage(1);
+  }, [search]);
 
   // Open Edit Modal
   function openEditModal(customer) {
@@ -193,7 +188,7 @@ export default function CustomersPage() {
             <div className="flex items-center justify-center py-12">
               <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-momcha-coral" />
             </div>
-          ) : filteredCustomers.length === 0 ? (
+          ) : customers.length === 0 ? (
             <div className="text-center py-12 text-momcha-text-light">
               <p className="text-sm">Tidak ada customer yang ditemukan</p>
             </div>
@@ -201,7 +196,7 @@ export default function CustomersPage() {
             <>
               {/* MOBILE VIEW - Cards */}
               <div className="lg:hidden divide-y divide-momcha-peach">
-                {filteredCustomers.map((customer) => (
+                {customers.map((customer) => (
                   <div key={customer.id} className="p-4 space-y-3">
                     {/* Header */}
                     <div className="flex items-start justify-between gap-3">

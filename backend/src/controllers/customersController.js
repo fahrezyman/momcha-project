@@ -36,9 +36,11 @@ async function getAllCustomers(req, res) {
     query += ` ORDER BY c.created_at DESC`;
 
     // Pagination
-    const offset = (page - 1) * limit;
+    const safePage = Math.max(1, parseInt(page) || 1);
+    const safeLimit = Math.min(100, Math.max(1, parseInt(limit) || 10));
+    const offset = (safePage - 1) * safeLimit;
     query += ` LIMIT ? OFFSET ?`;
-    params.push(parseInt(limit), parseInt(offset));
+    params.push(safeLimit, offset);
 
     const [rows] = await db.query(query, params);
 
@@ -67,8 +69,8 @@ async function getAllCustomers(req, res) {
       success: true,
       data: rows,
       pagination: {
-        page: parseInt(page),
-        limit: parseInt(limit),
+        page: safePage,
+        limit: safeLimit,
         total,
       },
     });
@@ -110,18 +112,19 @@ async function getCustomerById(req, res) {
     // Get customer orders
     const [orders] = await db.query(
       `
-      SELECT 
+      SELECT
         o.order_number,
-        s.name as service_name,
+        GROUP_CONCAT(DISTINCT os.service_name SEPARATOR ', ') as services_names,
         o.service_date,
         o.service_start_time,
-        o.amount,
+        o.total_amount,
         o.payment_status,
         o.status,
         o.created_at
       FROM orders o
-      JOIN services s ON o.service_id = s.id
+      LEFT JOIN order_services os ON o.id = os.order_id
       WHERE o.customer_id = ?
+      GROUP BY o.id
       ORDER BY o.created_at DESC
     `,
       [id],
@@ -130,9 +133,9 @@ async function getCustomerById(req, res) {
     // Get stats
     const [stats] = await db.query(
       `
-      SELECT 
+      SELECT
         COUNT(id) as total_orders,
-        COALESCE(SUM(CASE WHEN payment_status = 'paid' THEN amount ELSE 0 END), 0) as total_spent
+        COALESCE(SUM(CASE WHEN payment_status = 'paid' THEN total_amount ELSE 0 END), 0) as total_spent
       FROM orders
       WHERE customer_id = ?
     `,
