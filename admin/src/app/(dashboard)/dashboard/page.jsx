@@ -223,7 +223,11 @@ export default function DashboardPage() {
                   <Link
                     key={order.id}
                     href={`/orders/${order.id}`}
-                    className="flex items-start gap-2 lg:gap-3 p-2 lg:p-3 rounded-lg bg-momcha-cream hover:bg-momcha-peach transition-colors"
+                    className={`flex items-start gap-2 lg:gap-3 p-2 lg:p-3 rounded-lg transition-colors border-l-4 ${
+                      order.payment_status === "paid"
+                        ? "bg-blue-50 border-blue-400 hover:bg-blue-100"
+                        : "bg-yellow-50 border-yellow-400 hover:bg-yellow-100"
+                    }`}
                   >
                     <div className="shrink-0 w-10 h-10 lg:w-12 lg:h-12 rounded-lg bg-momcha-coral flex flex-col items-center justify-center text-white">
                       <span className="text-xs font-medium">
