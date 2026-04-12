@@ -1,7 +1,7 @@
-import jsPDF from "jspdf";
 import { formatCurrency, formatDate, formatTime } from "@/constants";
 
-export function generateInvoicePDF(order) {
+export async function generateInvoicePDF(order) {
+  const { default: jsPDF } = await import("jspdf");
   const doc = new jsPDF();
 
   // Colors

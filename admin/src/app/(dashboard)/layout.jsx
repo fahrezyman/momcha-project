@@ -18,16 +18,7 @@ export default function DashboardLayout({ children }) {
     }
   }, [isAuthenticated, loading, router]);
 
-  // Show loading only on server/initial render
-  if (loading) {
-    return (
-      <div className="min-h-screen bg-momcha-cream flex items-center justify-center">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-momcha-coral" />
-      </div>
-    );
-  }
-
-  if (!isAuthenticated) {
+  if (!loading && !isAuthenticated) {
     return null;
   }
 

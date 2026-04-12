@@ -23,6 +23,7 @@ import {
   User,
 } from "lucide-react";
 import Link from "next/link";
+import { TableRowsSkeleton } from "@/components/skeletons";
 
 export default function OrdersPage() {
   const [orders, setOrders] = useState([]);
@@ -169,9 +170,7 @@ export default function OrdersPage() {
       <Card className="border-momcha-peach">
         <CardContent className="p-0">
           {loading ? (
-            <div className="flex items-center justify-center py-12">
-              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-momcha-coral" />
-            </div>
+            <TableRowsSkeleton />
           ) : filteredOrders.length === 0 ? (
             <div className="text-center py-12 text-momcha-text-light">
               <p className="text-sm">Tidak ada order yang ditemukan</p>

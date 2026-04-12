@@ -25,6 +25,7 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import { toast } from "sonner";
+import { CalendarSkeleton } from "@/components/skeletons";
 import {
   startOfWeek,
   endOfWeek,
@@ -239,9 +240,7 @@ export default function CalendarPage() {
 
       {/* Calendar Grid */}
       {loading ? (
-        <div className="flex items-center justify-center py-12">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-momcha-coral" />
-        </div>
+        <CalendarSkeleton />
       ) : view === "week" ? (
         // Week View - Responsive
         <Card className="border-momcha-peach overflow-hidden">

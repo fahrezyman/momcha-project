@@ -48,6 +48,7 @@ import {
   FileDown,
 } from "lucide-react";
 import Link from "next/link";
+import { OrderDetailSkeleton } from "@/components/skeletons";
 import { toast } from "sonner";
 
 export default function OrderDetailPage() {
@@ -346,13 +347,7 @@ export default function OrderDetailPage() {
     );
   }
 
-  if (loading) {
-    return (
-      <div className="flex items-center justify-center h-64">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-momcha-coral" />
-      </div>
-    );
-  }
+  if (loading) return <OrderDetailSkeleton />;
 
   if (!order) {
     return (
@@ -692,7 +687,7 @@ export default function OrderDetailPage() {
               <Button
                 variant="outline"
                 className="w-full justify-start text-sm h-9"
-                onClick={() => generateInvoicePDF(order)}
+                onClick={() => generateInvoicePDF(order).catch(console.error)}
               >
                 <FileDown size={14} className="mr-2" />
                 Download Invoice PDF

@@ -29,6 +29,7 @@ import {
   Calendar,
   Download,
 } from "lucide-react";
+import { ReportsPageSkeleton } from "@/components/skeletons";
 import { toast } from "sonner";
 import { format, subMonths, startOfMonth, endOfMonth } from "date-fns";
 import { id } from "date-fns/locale";
@@ -227,13 +228,7 @@ export default function ReportsPage() {
     toast.success("Laporan berhasil diexport!");
   }
 
-  if (loading) {
-    return (
-      <div className="flex items-center justify-center h-64">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-momcha-coral" />
-      </div>
-    );
-  }
+  if (loading) return <ReportsPageSkeleton />;
 
   return (
     <div className="space-y-4 lg:space-y-6">
