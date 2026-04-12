@@ -197,7 +197,7 @@ ul {
 }
 
 .logo-img {
-  height: 100px;
+  height: clamp(55px, 8vw, 80px);
   width: auto;
 }
 
@@ -278,7 +278,7 @@ ul {
 .hero-description {
   color: var(--text-light);
   margin-bottom: 2rem;
-  font-size: 1.125rem;
+  font-size: clamp(0.95rem, 2vw, 1.125rem);
 }
 
 .hero-button svg {
@@ -288,15 +288,16 @@ ul {
 
 .hero-photo-container {
   position: relative;
-  width: 400px;
-  height: 400px;
+  width: clamp(260px, 40vw, 400px);
+  height: clamp(260px, 40vw, 400px);
   display: flex;
   align-items: center;
   justify-content: center;
+  margin: 0 auto;
 }
 .hero-photo {
-  width: 320px;
-  height: 320px;
+  width: 80%;
+  height: 80%;
   border-radius: 50%;
   object-fit: cover;
   position: relative;
@@ -656,25 +657,33 @@ ul {
 
 /* ========== RESPONSIVE ========== */
 @media screen and (max-width: 968px) {
+  .hero {
+    padding: 4rem 0;
+  }
+
   .hero-container,
   .about-container {
     grid-template-columns: 1fr;
     gap: 2rem;
+    text-align: center;
   }
 
-  .hero-image,
-  .about-image {
+  .hero-image {
     order: -1;
-  }
-
-  .hero-blob,
-  .about-blob {
-    width: 280px;
-    height: 280px;
+    display: flex;
+    justify-content: center;
   }
 
   .about-content {
     padding: 2rem;
+  }
+
+  .about-info-item {
+    text-align: left;
+  }
+
+  .section-description {
+    max-width: 100%;
   }
 }
 
@@ -688,6 +697,7 @@ ul {
     padding: 4rem 1.5rem 3rem;
     box-shadow: var(--shadow-md);
     transition: var(--transition);
+    z-index: 99;
   }
 
   .nav-menu.show-menu {
@@ -697,6 +707,7 @@ ul {
   .nav-list {
     flex-direction: column;
     text-align: center;
+    gap: 1.5rem;
   }
 
   .nav-toggle,
@@ -710,12 +721,21 @@ ul {
     right: 1.5rem;
   }
 
+  .hero {
+    padding: 3rem 0;
+  }
+
   .services-grid {
-    grid-template-columns: 1fr;
+    grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
   }
 
   .contact-container {
     grid-template-columns: 1fr;
+  }
+
+  .button {
+    width: 100%;
+    justify-content: center;
   }
 }
 
@@ -724,8 +744,21 @@ ul {
     padding: 0 1rem;
   }
 
+  .hero {
+    padding: 2rem 0;
+  }
+
+  .hero-photo-container {
+    width: clamp(220px, 70vw, 300px);
+    height: clamp(220px, 70vw, 300px);
+  }
+
+  .hero-photo {
+    border-width: 5px;
+  }
+
   .button {
-    padding: 0.875rem 1.5rem;
+    padding: 0.875rem 1.25rem;
     font-size: 0.9rem;
   }
 
@@ -734,12 +767,20 @@ ul {
   }
 
   .about-content {
+    padding: 1.25rem;
+  }
+
+  .contact-card {
     padding: 1.5rem;
   }
 
   .scrollup {
-    width: 45px;
-    height: 45px;
+    width: 42px;
+    height: 42px;
     right: 1rem;
+  }
+
+  .footer {
+    padding: 2rem 0 1.5rem;
   }
 }
