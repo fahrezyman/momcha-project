@@ -10,17 +10,16 @@ const app = express();
 
 // Middleware
 const allowedOrigins = process.env.ALLOWED_ORIGINS?.split(",") || [];
-app.use(
-  cors({
-    origin: (origin, callback) => {
-      // Allow requests with no origin (mobile apps, curl, Postman)
-      if (!origin) return callback(null, true);
-      if (allowedOrigins.includes(origin)) return callback(null, true);
-      callback(new Error(`CORS: origin ${origin} not allowed`));
-    },
-    credentials: true,
-  }),
-);
+const strictCors = cors({
+  origin: (origin, callback) => {
+    if (!origin) return callback(null, true);
+    if (allowedOrigins.includes(origin)) return callback(null, true);
+    callback(new Error(`CORS: origin ${origin} not allowed`));
+  },
+  credentials: true,
+});
+const openCors = cors();
+
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(helmet());
@@ -28,10 +27,10 @@ app.use("/api/", require("./utils/rateLimiter").apiLimiter);
 app.use("/api/auth/login", require("./utils/rateLimiter").loginLimiter);
 
 // Routes
-app.use("/api/auth", require("./routes/auth"));
-app.use("/api/services", require("./routes/services"));
-app.use("/api/customers", require("./routes/customers"));
-app.use("/api/orders", require("./routes/orders"));
+app.use("/api/auth", strictCors, require("./routes/auth"));
+app.use("/api/services", openCors, require("./routes/services")); 
+app.use("/api/customers", strictCors, require("./routes/customers"));
+app.use("/api/orders", strictCors, require("./routes/orders"));
 app.use("/api/webhook", require("./routes/webhook"));
 
 // Health check
