@@ -15,6 +15,7 @@ class API {
       ...options,
       headers: {
         "Content-Type": "application/json",
+        "bypass-tunnel-reminder": "true",
         ...(token && { Authorization: `Bearer ${token}` }),
         ...options.headers,
       },
