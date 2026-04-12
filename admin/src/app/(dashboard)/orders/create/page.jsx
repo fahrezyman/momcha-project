@@ -17,6 +17,7 @@ import {
 import { ArrowLeft, Plus, Trash2, Loader2, Check, User } from "lucide-react";
 import Link from "next/link";
 import { toast } from "sonner";
+import { ServicePickerSkeleton } from "@/components/skeletons";
 
 export default function CreateOrderPage() {
   const router = useRouter();
@@ -382,9 +383,7 @@ export default function CreateOrderPage() {
           </CardHeader>
           <CardContent className="space-y-3">
             {loadingServices ? (
-              <div className="flex items-center justify-center py-8">
-                <Loader2 size={24} className="animate-spin text-momcha-coral" />
-              </div>
+              <ServicePickerSkeleton />
             ) : (
               <>
                 {selectedServices.map((item, index) => (

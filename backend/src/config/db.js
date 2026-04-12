@@ -3,7 +3,10 @@ const fs = require("fs");
 const path = require("path");
 require("dotenv").config();
 
-const sslConfig = process.env.DB_SSL_CA
+const isDev = process.env.NODE_ENV === "development";
+const sslConfig = isDev
+  ? false
+  : process.env.DB_SSL_CA
   ? { ca: fs.readFileSync(path.resolve(process.env.DB_SSL_CA)) }
   : { rejectUnauthorized: false };
 

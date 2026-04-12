@@ -25,6 +25,7 @@ import {
   Clock,
 } from "lucide-react";
 import { toast } from "sonner";
+import { TableRowsSkeleton } from "@/components/skeletons";
 
 export default function ServicesPage() {
   const [services, setServices] = useState([]);
@@ -273,9 +274,7 @@ export default function ServicesPage() {
       <Card className="border-momcha-peach">
         <CardContent className="p-0">
           {loading ? (
-            <div className="flex items-center justify-center py-12">
-              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-momcha-coral" />
-            </div>
+            <TableRowsSkeleton rows={4} />
           ) : filteredServices.length === 0 ? (
             <div className="text-center py-12 text-momcha-text-light">
               <p className="text-sm">Tidak ada service yang ditemukan</p>

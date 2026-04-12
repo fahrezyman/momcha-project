@@ -4,6 +4,7 @@ import { useEffect, useState, useCallback } from "react";
 import { api } from "@/lib/api";
 import { formatCurrency, formatDate, formatTime } from "@/constants";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { DashboardPageSkeleton } from "@/components/skeletons";
 import {
   ShoppingBag,
   DollarSign,
@@ -98,13 +99,7 @@ export default function DashboardPage() {
     loadDashboardData();
   }, [loadDashboardData]);
 
-  if (loading) {
-    return (
-      <div className="flex items-center justify-center h-64">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-momcha-coral" />
-      </div>
-    );
-  }
+  if (loading) return <DashboardPageSkeleton />;
 
   return (
     <div className="space-y-4 lg:space-y-6">
