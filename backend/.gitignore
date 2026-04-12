@@ -3,3 +3,5 @@ node_modules/
 .env.*
 logs/
 *.log
+*.pem
+schema_utf8.sql

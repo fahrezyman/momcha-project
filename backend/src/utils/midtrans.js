@@ -2,9 +2,9 @@ const midtransClient = require("midtrans-client");
 
 // Create Snap API instance
 const snap = new midtransClient.Snap({
-  isProduction: process.env.MIDTRANS_IS_PRODUCTION_DEV === "true",
-  serverKey: process.env.MIDTRANS_SERVER_KEY_DEV,
-  clientKey: process.env.MIDTRANS_CLIENT_KEY_DEV,
+  isProduction: process.env.MIDTRANS_IS_PRODUCTION === "true",
+  serverKey: process.env.MIDTRANS_SERVER_KEY,
+  clientKey: process.env.MIDTRANS_CLIENT_KEY,
 });
 
 /**
@@ -87,7 +87,7 @@ function verifySignature(notification) {
 
   const { order_id, status_code, gross_amount, signature_key } = notification;
 
-  const serverKey = process.env.MIDTRANS_SERVER_KEY_DEV;
+  const serverKey = process.env.MIDTRANS_SERVER_KEY;
 
   // Create signature
   const hash = crypto
