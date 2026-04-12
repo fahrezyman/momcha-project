@@ -1,14 +1,24 @@
 const express = require("express");
 const cors = require("cors");
 const helmet = require("helmet");
-require("dotenv").config();
+const path = require("path");
+
+const env = process.env.NODE_ENV || "development";
+require("dotenv").config({ path: path.resolve(process.cwd(), `.env.${env}`) });
 
 const app = express();
 
 // Middleware
+const allowedOrigins = process.env.ALLOWED_ORIGINS?.split(",") || [];
 app.use(
   cors({
-    origin: process.env.ALLOWED_ORIGINS?.split(",") || "*",
+    origin: (origin, callback) => {
+      // Allow requests with no origin (mobile apps, curl, Postman)
+      if (!origin) return callback(null, true);
+      if (allowedOrigins.includes(origin)) return callback(null, true);
+      callback(new Error(`CORS: origin ${origin} not allowed`));
+    },
+    credentials: true,
   }),
 );
 app.use(express.json());

@@ -61,10 +61,6 @@ export default function LoginPage() {
                 height={80}
                 priority
                 className="object-contain"
-                priority
-                onError={(e) => {
-                  e.currentTarget.style.display = "none";
-                }}
               />
             </div>
           </div>

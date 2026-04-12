@@ -59,9 +59,6 @@ export default function Sidebar({ isOpen, onClose }) {
               height={75}
               priority
               className="object-contain"
-              onError={(e) => {
-                e.currentTarget.style.display = "none";
-              }}
             />
           </div>
           <h1 className="text-xl font-bold text-momcha-coral mt-2">
