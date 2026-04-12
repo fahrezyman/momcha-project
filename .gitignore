@@ -3,4 +3,5 @@
 *.pem
 *.key
 *.log
+*.sql
 .DS_Store
