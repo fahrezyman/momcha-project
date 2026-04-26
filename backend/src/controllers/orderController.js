@@ -525,7 +525,7 @@ async function createOrder(req, res) {
       },
     });
   } catch (error) {
-    log.error("Create order error:", error);
+    logger.error("Create order error:", error);
     console.error("Create order error:", error);
     res.status(500).json({
       success: false,
@@ -626,7 +626,7 @@ async function updateOrder(req, res) {
             [midtransResult.redirect_url, midtransResult.token, id],
           );
         } catch (midtransError) {
-          log.error("Midtrans error:", midtransError);
+          logger.error("Midtrans error:", midtransError);
           console.error("Midtrans error:", midtransError);
         }
       }
@@ -645,7 +645,7 @@ async function updateOrder(req, res) {
       },
     });
   } catch (error) {
-    log.error("Update order error:", error);
+    logger.error("Update order error:", error);
     console.error("Update order error:", error);
     res.status(500).json({
       success: false,
@@ -744,7 +744,7 @@ async function rescheduleOrder(req, res) {
       },
     });
   } catch (error) {
-    log.error("Reschedule order error:", error);
+    logger.error("Reschedule order error:", error);
     console.error("Reschedule order error:", error);
     res.status(500).json({
       success: false,
