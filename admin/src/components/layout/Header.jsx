@@ -51,7 +51,7 @@ export default function Header({ onToggleSidebar, isSidebarOpen }) {
           <h2 className="text-base lg:text-lg font-semibold text-momcha-text-dark truncate">
             {title}
           </h2>
-          <p className="text-xs text-momcha-text-light capitalize hidden sm:block">
+          <p className="text-xs text-momcha-text-light capitalize">
             {today}
           </p>
         </div>
