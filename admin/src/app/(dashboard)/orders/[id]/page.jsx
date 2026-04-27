@@ -65,6 +65,7 @@ export default function OrderDetailPage() {
   const [showCancelModal, setShowCancelModal] = useState(false);
   const [showMarkPaidModal, setShowMarkPaidModal] = useState(false);
   const [showCompleteModal, setShowCompleteModal] = useState(false);
+  const [completeConfirmed, setCompleteConfirmed] = useState(false);
   const [actionLoading, setActionLoading] = useState(false);
 
   // Services list
@@ -161,6 +162,7 @@ export default function OrderDetailPage() {
       if (res.success) {
         toast.success("Order ditandai sebagai selesai!");
         setShowCompleteModal(false);
+        setCompleteConfirmed(false);
         loadOrder();
       } else {
         toast.error(res.error?.message || "Gagal update status");
@@ -1063,7 +1065,7 @@ export default function OrderDetailPage() {
             </DialogDescription>
           </DialogHeader>
 
-          <div className="py-2 sm:py-4">
+          <div className="space-y-3 py-2 sm:py-4">
             <div className="flex items-center gap-3 p-3 sm:p-4 bg-blue-50 rounded-lg">
               <Check className="text-blue-600 shrink-0" size={20} />
               <div className="flex-1 min-w-0">
@@ -1079,12 +1081,24 @@ export default function OrderDetailPage() {
                 </p>
               </div>
             </div>
+
+            <label className="flex items-start gap-2 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={completeConfirmed}
+                onChange={(e) => setCompleteConfirmed(e.target.checked)}
+                className="mt-0.5 rounded"
+              />
+              <span className="text-xs sm:text-sm text-momcha-text-dark">
+                Saya konfirmasi bahwa semua layanan sudah selesai dikerjakan
+              </span>
+            </label>
           </div>
 
           <DialogFooter className="gap-2 sm:gap-0">
             <Button
               variant="outline"
-              onClick={() => setShowCompleteModal(false)}
+              onClick={() => { setShowCompleteModal(false); setCompleteConfirmed(false); }}
               disabled={actionLoading}
               className="text-sm h-9"
             >
@@ -1092,6 +1106,7 @@ export default function OrderDetailPage() {
             </Button>
             <Button
               onClick={markAsCompleted}
+              disabled={!completeConfirmed}
               disabled={actionLoading}
               className="bg-momcha-coral hover:bg-momcha-brown text-sm h-9"
             >
