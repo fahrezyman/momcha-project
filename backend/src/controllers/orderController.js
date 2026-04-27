@@ -832,7 +832,7 @@ async function updateOrderStatus(req, res) {
 async function cancelOrder(req, res) {
   try {
     const { id } = req.params;
-    const { reason } = req.body;
+    const { reason, refund_notes } = req.body;
 
     const [orders] = await db.query("SELECT * FROM orders WHERE id = ?", [id]);
 
@@ -848,13 +848,24 @@ async function cancelOrder(req, res) {
 
     const order = orders[0];
 
-    const cancelNotes = reason
-      ? `[Dibatalkan] ${reason}`
-      : "[Dibatalkan]";
+    if (order.payment_status === "paid" && !refund_notes) {
+      return res.status(400).json({
+        success: false,
+        error: {
+          code: "VALIDATION_ERROR",
+          message: "Keterangan refund wajib diisi untuk order yang sudah lunas",
+        },
+      });
+    }
+
+    const cancelNotes = reason ? `[Dibatalkan] ${reason}` : "[Dibatalkan]";
+    const fullNotes = refund_notes
+      ? `${cancelNotes}\n[Refund Manual] ${refund_notes}`
+      : cancelNotes;
 
     await db.query(
       "UPDATE orders SET status = ?, payment_status = ?, notes = ? WHERE id = ?",
-      ["cancelled", "cancelled", cancelNotes, id],
+      ["cancelled", "cancelled", fullNotes, id],
     );
 
     res.json({

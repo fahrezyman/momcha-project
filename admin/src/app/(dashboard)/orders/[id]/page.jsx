@@ -81,6 +81,7 @@ export default function OrderDetailPage() {
 
   // Cancel form
   const [cancelReason, setCancelReason] = useState("");
+  const [refundNotes, setRefundNotes] = useState("");
 
   useEffect(() => {
     if (orderId) {
@@ -310,13 +311,24 @@ export default function OrderDetailPage() {
       return;
     }
 
+    if (order.payment_status === "paid" && !refundNotes.trim()) {
+      toast.error("Keterangan refund wajib diisi untuk order yang sudah lunas");
+      return;
+    }
+
     try {
       setActionLoading(true);
-      const res = await api.cancelOrder(orderId, cancelReason);
+      const res = await api.cancelOrder(
+        orderId,
+        cancelReason,
+        order.payment_status === "paid" ? refundNotes : undefined,
+      );
 
       if (res.success) {
         toast.success("Order berhasil dibatalkan!");
         setShowCancelModal(false);
+        setCancelReason("");
+        setRefundNotes("");
         loadOrder();
       } else {
         toast.error(res.error?.message || "Gagal membatalkan order");
@@ -676,6 +688,21 @@ export default function OrderDetailPage() {
                   </p>
                 </div>
               )}
+
+              {order.status === "cancelled" &&
+                order.notes?.includes("[Refund Manual]") && (
+                  <div className="p-2 sm:p-3 bg-blue-50 rounded-lg space-y-1">
+                    <p className="text-xs font-medium text-blue-800">
+                      Keterangan Refund
+                    </p>
+                    <p className="text-xs text-blue-700">
+                      {order.notes
+                        .split("\n")
+                        .find((l) => l.startsWith("[Refund Manual]"))
+                        ?.replace("[Refund Manual] ", "")}
+                    </p>
+                  </div>
+                )}
             </CardContent>
           </Card>
 
@@ -1109,6 +1136,21 @@ export default function OrderDetailPage() {
                 onChange={(e) => setCancelReason(e.target.value)}
               />
             </div>
+
+            {order.payment_status === "paid" && (
+              <div className="space-y-1.5">
+                <label className="text-xs sm:text-sm font-medium">
+                  Keterangan Refund <span className="text-red-500">*</span>
+                </label>
+                <textarea
+                  className="w-full px-2 sm:px-3 py-1.5 sm:py-2 border rounded-lg text-xs sm:text-sm resize-none focus:outline-none focus:ring-2 focus:ring-momcha-coral"
+                  rows="2"
+                  placeholder="Contoh: Sudah transfer balik Rp 150.000 ke rekening BCA customer"
+                  value={refundNotes}
+                  onChange={(e) => setRefundNotes(e.target.value)}
+                />
+              </div>
+            )}
           </div>
 
           <DialogFooter className="gap-2 sm:gap-0">

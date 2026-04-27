@@ -149,10 +149,10 @@ class API {
     });
   }
 
-  async cancelOrder(id, reason) {
+  async cancelOrder(id, reason, refundNotes) {
     return this.fetch(`/orders/${id}/cancel`, {
       method: "POST",
-      body: JSON.stringify({ reason }),
+      body: JSON.stringify({ reason, refund_notes: refundNotes }),
     });
   }
 
