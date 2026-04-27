@@ -44,9 +44,9 @@ export default function Sidebar({ isOpen, onClose }) {
           top-0 left-0 h-screen
           w-64 bg-white border-r border-momcha-peach
           flex flex-col shadow-sm
-          transition-all duration-300 ease-in-out
+          transition-transform duration-300 ease-in-out
           z-40
-          ${isOpen ? "translate-x-0" : "-translate-x-full lg:hidden"}
+          ${isOpen ? "translate-x-0" : "-translate-x-full lg:translate-x-0"}
         `}
       >
         {/* Logo */}
