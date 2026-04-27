@@ -13,6 +13,10 @@ export default function DashboardLayout({ children }) {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
 
   useEffect(() => {
+    setIsSidebarOpen(window.innerWidth >= 1024);
+  }, []);
+
+  useEffect(() => {
     if (!loading && !isAuthenticated) {
       router.push("/login");
     }

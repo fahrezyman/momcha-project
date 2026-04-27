@@ -36,7 +36,7 @@ export default function Header({ onToggleSidebar, isSidebarOpen }) {
         {/* Hamburger Button (Mobile Only) */}
         <button
           onClick={onToggleSidebar}
-          className="lg:hidden p-2 hover:bg-momcha-cream rounded-lg transition-colors shrink-0"
+          className="p-2 hover:bg-momcha-cream rounded-lg transition-colors shrink-0"
           aria-label="Toggle menu"
         >
           {isSidebarOpen ? (
