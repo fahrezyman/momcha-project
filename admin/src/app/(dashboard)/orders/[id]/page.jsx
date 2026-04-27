@@ -357,7 +357,10 @@ export default function OrderDetailPage() {
     );
   }
 
-  const canEdit = order.status !== "cancelled" && order.status !== "completed";
+  const canEdit =
+    order.status !== "cancelled" &&
+    order.status !== "completed" &&
+    order.payment_status !== "paid";
   const canCancel =
     order.status !== "cancelled" && order.status !== "completed";
   const canMarkPaid = order.payment_status === "pending";
@@ -900,7 +903,7 @@ export default function OrderDetailPage() {
                 onChange={(e) =>
                   setEditForm({ ...editForm, service_date: e.target.value })
                 }
-                min={new Date().toISOString().split("T")[0]}
+                min={(() => { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`; })()}
                 className="h-9 sm:h-10 text-sm"
               />
             </div>
