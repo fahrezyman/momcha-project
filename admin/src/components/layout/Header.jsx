@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { usePathname } from "next/navigation";
 import { useAuth } from "@/context/AuthContext";
 import { Menu, X } from "lucide-react";
@@ -19,15 +19,20 @@ const pageTitles = {
 export default function Header({ onToggleSidebar, isSidebarOpen }) {
   const pathname = usePathname();
   const { admin } = useAuth();
+  const [today, setToday] = useState("");
 
   const title = pageTitles[pathname] || "Dashboard";
 
-  const today = new Intl.DateTimeFormat("id-ID", {
-    weekday: "long",
-    day: "numeric",
-    month: "long",
-    year: "numeric",
-  }).format(new Date());
+  useEffect(() => {
+    setToday(
+      new Intl.DateTimeFormat("id-ID", {
+        weekday: "long",
+        day: "numeric",
+        month: "long",
+        year: "numeric",
+      }).format(new Date())
+    );
+  }, []);
 
   return (
     <header className="bg-white border-b border-momcha-peach px-4 lg:px-6 py-3 lg:py-4 flex items-center justify-between shadow-sm">
