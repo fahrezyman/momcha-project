@@ -8,7 +8,7 @@ const sslConfig = isDev
   ? false
   : process.env.DB_SSL_CA
   ? { ca: fs.readFileSync(path.resolve(process.env.DB_SSL_CA)) }
-  : { rejectUnauthorized: false };
+  : false;
 
 // Create connection pool
 const pool = mysql.createPool({
