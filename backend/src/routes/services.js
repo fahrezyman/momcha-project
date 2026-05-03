@@ -6,7 +6,6 @@ const {
   createService,
   updateService,
   deleteService,
-  reorderServices,
 } = require("../controllers/servicesController");
 const { authenticate } = require("../middleware/auth");
 
@@ -16,7 +15,6 @@ router.get("/:id", getServiceById);
 
 // Protected routes (admin only)
 router.post("/", authenticate, createService);
-router.put("/reorder", authenticate, reorderServices);
 router.put("/:id", authenticate, updateService);
 router.delete("/:id", authenticate, deleteService);
 
