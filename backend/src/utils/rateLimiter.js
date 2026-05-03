@@ -1,9 +1,12 @@
 const rateLimit = require("express-rate-limit");
 
+const skipOptions = (req) => req.method === "OPTIONS";
+
 // API rate limit
 const apiLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 100, // max 100 requests per window
+  max: 100,
+  skip: skipOptions,
   message: {
     success: false,
     error: {
@@ -16,7 +19,8 @@ const apiLimiter = rateLimit({
 // Login rate limit (stricter)
 const loginLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
-  max: 5, // max 5 login attempts
+  max: 5,
+  skip: skipOptions,
   message: {
     success: false,
     error: {
