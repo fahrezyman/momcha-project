@@ -2,6 +2,18 @@ const logger = require("../utils/logger");
 const db = require("../config/db");
 const { generateOrderNumber } = require("../utils/generateOrderNumbers");
 const { createTransaction } = require("../utils/midtrans");
+const { paginate } = require("../utils/pagination");
+
+function buildOrderFilters({ status, payment_status, date_from, date_to, customer_id }) {
+  const conditions = [];
+  const values = [];
+  if (status)         { conditions.push("o.status = ?");           values.push(status); }
+  if (payment_status) { conditions.push("o.payment_status = ?");   values.push(payment_status); }
+  if (date_from)      { conditions.push("o.service_date >= ?");    values.push(date_from); }
+  if (date_to)        { conditions.push("o.service_date <= ?");    values.push(date_to); }
+  if (customer_id)    { conditions.push("o.customer_id = ?");      values.push(customer_id); }
+  return { sql: conditions.map((c) => ` AND ${c}`).join(""), values };
+}
 
 // Fetch service details and calculate totals from an array of { service_id, quantity, custom_price? }
 // allowCustomPrice: only createOrder supports overriding price
@@ -106,76 +118,18 @@ async function getAllOrders(req, res) {
       WHERE 1=1
     `;
 
-    const params = [];
+    const filters = buildOrderFilters(req.query);
+    const { page: safePage, limit: safeLimit, offset } = paginate(page, limit);
 
-    // Filters
-    if (status) {
-      query += ` AND o.status = ?`;
-      params.push(status);
-    }
-
-    if (payment_status) {
-      query += ` AND o.payment_status = ?`;
-      params.push(payment_status);
-    }
-
-    if (date_from) {
-      query += ` AND o.service_date >= ?`;
-      params.push(date_from);
-    }
-
-    if (date_to) {
-      query += ` AND o.service_date <= ?`;
-      params.push(date_to);
-    }
-
-    if (customer_id) {
-      query += ` AND o.customer_id = ?`;
-      params.push(customer_id);
-    }
-
-    query += ` GROUP BY o.id`;
-    query += ` ORDER BY o.created_at DESC`;
-
-    // Pagination
-    const safePage = Math.max(1, parseInt(page) || 1);
-    const safeLimit = Math.min(100, Math.max(1, parseInt(limit) || 20));
-    const offset = (safePage - 1) * safeLimit;
-    query += ` LIMIT ? OFFSET ?`;
+    query += filters.sql;
+    const params = [...filters.values];
+    query += ` GROUP BY o.id ORDER BY o.created_at DESC LIMIT ? OFFSET ?`;
     params.push(safeLimit, offset);
 
     const [rows] = await db.query(query, params);
 
-    // Get total count
-    let countQuery = `
-      SELECT COUNT(DISTINCT o.id) as total 
-      FROM orders o
-      WHERE 1=1
-    `;
-    const countParams = [];
-
-    if (status) {
-      countQuery += ` AND o.status = ?`;
-      countParams.push(status);
-    }
-    if (payment_status) {
-      countQuery += ` AND o.payment_status = ?`;
-      countParams.push(payment_status);
-    }
-    if (date_from) {
-      countQuery += ` AND o.service_date >= ?`;
-      countParams.push(date_from);
-    }
-    if (date_to) {
-      countQuery += ` AND o.service_date <= ?`;
-      countParams.push(date_to);
-    }
-    if (customer_id) {
-      countQuery += ` AND o.customer_id = ?`;
-      countParams.push(customer_id);
-    }
-
-    const [countResult] = await db.query(countQuery, countParams);
+    const countQuery = `SELECT COUNT(DISTINCT o.id) as total FROM orders o WHERE 1=1${filters.sql}`;
+    const [countResult] = await db.query(countQuery, filters.values);
     const total = countResult[0].total;
 
     res.json({

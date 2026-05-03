@@ -4,19 +4,12 @@ import { useEffect, useState, useRef } from "react";
 import { useReactToPrint } from "react-to-print";
 import { useRouter, useParams } from "next/navigation";
 import { api } from "@/lib/api";
-import {
-  formatCurrency,
-  formatDate,
-  formatTime,
-  ORDER_STATUS,
-  PAYMENT_STATUS,
-  STATUS_BADGE_COLORS,
-} from "@/constants";
+import { formatCurrency, formatDate, formatTime, ORDER_STATUS, PAYMENT_STATUS } from "@/constants";
+import { OrderStatusBadge, PaymentStatusBadge } from "@/components/StatusBadge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { generateInvoicePDF } from "@/lib/generateInvoicePDF";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
 import {
   Dialog,
   DialogContent,
@@ -343,24 +336,6 @@ export default function OrderDetailPage() {
     }
   }
 
-  function getStatusBadge(status) {
-    const statusData = ORDER_STATUS[status] || { label: status, color: "gray" };
-    return (
-      <Badge className={`${STATUS_BADGE_COLORS[statusData.color]} border text-xs`}>
-        {statusData.label}
-      </Badge>
-    );
-  }
-
-  function getPaymentBadge(status) {
-    const statusData = PAYMENT_STATUS[status] || { label: status, color: "gray" };
-    return (
-      <Badge className={`${STATUS_BADGE_COLORS[statusData.color]} border text-xs`}>
-        {statusData.label}
-      </Badge>
-    );
-  }
-
   if (loading) return <OrderDetailSkeleton />;
 
   if (!order) {
@@ -413,7 +388,7 @@ export default function OrderDetailPage() {
                 <p className="text-xs text-momcha-text-light mb-1">
                   Status Pembayaran
                 </p>
-                {getPaymentBadge(order.payment_status)}
+                <PaymentStatusBadge status={order.payment_status} bordered />
               </div>
               <CreditCard
                 className="text-momcha-coral hidden sm:block"
@@ -430,7 +405,7 @@ export default function OrderDetailPage() {
                 <p className="text-xs text-momcha-text-light mb-1">
                   Status Order
                 </p>
-                {getStatusBadge(order.status)}
+                <OrderStatusBadge status={order.status} bordered />
               </div>
               <FileText
                 className="text-momcha-pink hidden sm:block"

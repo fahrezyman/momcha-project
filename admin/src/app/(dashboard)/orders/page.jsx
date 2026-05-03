@@ -2,18 +2,11 @@
 
 import { useEffect, useState, useCallback } from "react";
 import { api } from "@/lib/api";
-import {
-  formatCurrency,
-  formatDate,
-  formatTime,
-  ORDER_STATUS,
-  PAYMENT_STATUS,
-  STATUS_BADGE_COLORS,
-} from "@/constants";
+import { formatCurrency, formatDate, formatTime, ORDER_STATUS, PAYMENT_STATUS } from "@/constants";
+import { OrderStatusBadge, PaymentStatusBadge } from "@/components/StatusBadge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
 import {
   Plus,
   Search,
@@ -78,24 +71,6 @@ export default function OrdersPage() {
         order.services_names.toLowerCase().includes(searchLower))
     );
   });
-
-  function getStatusBadge(status) {
-    const statusData = ORDER_STATUS[status] || { label: status, color: "gray" };
-    return (
-      <Badge className={`${STATUS_BADGE_COLORS[statusData.color]} border-0 text-xs`}>
-        {statusData.label}
-      </Badge>
-    );
-  }
-
-  function getPaymentBadge(status) {
-    const statusData = PAYMENT_STATUS[status] || { label: status, color: "gray" };
-    return (
-      <Badge className={`${STATUS_BADGE_COLORS[statusData.color]} border-0 text-xs`}>
-        {statusData.label}
-      </Badge>
-    );
-  }
 
   return (
     <div className="space-y-4 lg:space-y-6">
@@ -230,8 +205,8 @@ export default function OrdersPage() {
 
                     {/* Badges */}
                     <div className="flex items-center gap-2">
-                      {getPaymentBadge(order.payment_status)}
-                      {getStatusBadge(order.status)}
+                      <PaymentStatusBadge status={order.payment_status} />
+                      <OrderStatusBadge status={order.status} />
                     </div>
                   </Link>
                 ))}
@@ -323,11 +298,11 @@ export default function OrdersPage() {
                         </td>
 
                         <td className="px-6 py-4">
-                          {getPaymentBadge(order.payment_status)}
+                          <PaymentStatusBadge status={order.payment_status} />
                         </td>
 
                         <td className="px-6 py-4">
-                          {getStatusBadge(order.status)}
+                          <OrderStatusBadge status={order.status} />
                         </td>
 
                         <td className="px-6 py-4 text-right">

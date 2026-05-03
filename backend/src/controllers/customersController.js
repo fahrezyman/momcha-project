@@ -1,5 +1,6 @@
 const logger = require("../utils/logger");
 const db = require("../config/db");
+const { paginate } = require("../utils/pagination");
 
 // Get all customers
 async function getAllCustomers(req, res) {
@@ -36,9 +37,7 @@ async function getAllCustomers(req, res) {
     query += ` ORDER BY c.created_at DESC`;
 
     // Pagination
-    const safePage = Math.max(1, parseInt(page) || 1);
-    const safeLimit = Math.min(100, Math.max(1, parseInt(limit) || 10));
-    const offset = (safePage - 1) * safeLimit;
+    const { page: safePage, limit: safeLimit, offset } = paginate(page, limit);
     query += ` LIMIT ? OFFSET ?`;
     params.push(safeLimit, offset);
 
