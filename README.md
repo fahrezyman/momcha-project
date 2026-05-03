@@ -13,27 +13,28 @@ momcha-project/
 
 ## Tech Stack
 
-| Layer    | Teknologi                                                  |
-| -------- | ---------------------------------------------------------- |
-| Landing  | HTML, CSS, JavaScript (vanilla)                            |
-| Admin    | Next.js 16, React 19, Tailwind CSS, shadcn/ui, Recharts    |
-| Backend  | Node.js, Express 5, MySQL2, JWT, Midtrans, Winston         |
+| Layer    | Teknologi                                                                        |
+| -------- | -------------------------------------------------------------------------------- |
+| Landing  | HTML, CSS, JavaScript (vanilla)                                                  |
+| Admin    | Next.js 16, React 19, Tailwind CSS v4, shadcn/ui, Recharts, @dnd-kit, jsPDF     |
+| Backend  | Node.js, Express 5, MySQL2, JWT, bcrypt, Midtrans, Helmet, Winston               |
 
 ## Fitur
 
 ### Admin Dashboard
-- **Dashboard** — ringkasan statistik pesanan, pendapatan, dan grafik
-- **Pesanan** — manajemen pesanan, detail pesanan, cetak invoice PDF
-- **Pelanggan** — daftar dan detail data pelanggan
-- **Layanan** — manajemen layanan yang ditawarkan
-- **Kalender** — jadwal kunjungan dan hari libur nasional
-- **Laporan** — laporan pendapatan dengan filter rentang tanggal
+- **Dashboard** — ringkasan statistik pesanan, pendapatan, dan grafik tren
+- **Pesanan** — manajemen pesanan, filter status & pembayaran, detail pesanan, cetak invoice PDF
+- **Pelanggan** — daftar pelanggan, riwayat pesanan, dan statistik per pelanggan
+- **Layanan** — manajemen layanan dengan drag-and-drop untuk mengatur urutan tampil
+- **Kalender** — jadwal kunjungan bulanan dan hari libur nasional otomatis
+- **Laporan** — laporan pendapatan dengan filter rentang tanggal dan ekspor
 
 ### Backend API
-- Autentikasi admin dengan JWT
+- Autentikasi admin dengan JWT + bcrypt
 - CRUD pesanan, pelanggan, dan layanan
-- Integrasi pembayaran Midtrans
-- Rate limiting dan security headers (Helmet)
+- Reorder layanan dengan `sort_order`
+- Integrasi pembayaran Midtrans + webhook handler
+- Rate limiting, security headers (Helmet), CORS
 - Logging dengan Winston
 
 ### Landing Page
@@ -103,9 +104,9 @@ npx serve landing
 
 ## Deployment
 
-- **Backend** — di-deploy ke VPS/cloud (Node.js server)
-- **Admin** — di-deploy ke Vercel
-- **Landing** — di-deploy ke hosting statis
+- **Backend** — VPS dengan PM2 (`pm2 start src/server.js --name momcha-backend`)
+- **Admin** — Vercel (auto-deploy dari branch `main`)
+- **Landing** — hosting statis
 
 ## Lisensi
 
