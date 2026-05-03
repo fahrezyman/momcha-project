@@ -1081,8 +1081,7 @@ export default function OrderDetailPage() {
             </Button>
             <Button
               onClick={markAsCompleted}
-              disabled={!completeConfirmed}
-              disabled={actionLoading}
+              disabled={!completeConfirmed || actionLoading}
               className="bg-momcha-coral hover:bg-momcha-brown text-sm h-9"
             >
               {actionLoading ? (

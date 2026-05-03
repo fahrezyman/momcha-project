@@ -361,7 +361,7 @@ export default function CalendarPage() {
                       key={day.toISOString()}
                       className={`min-h-20 sm:min-h-24 p-1.5 sm:p-2 border-b border-r border-momcha-peach ${!isCurrentMonth ? "bg-gray-50" : ""} ${isToday ? "bg-momcha-cream" : ""} ${holiday ? "bg-red-50" : ""}`}
                     >
-                      <div className="flex items-center justify-between mb-1">
+                      <div className="flex items-center justify-between mb-0.5">
                         <div
                           className={`text-xs font-medium ${
                             holiday || isWeekend
@@ -375,12 +375,13 @@ export default function CalendarPage() {
                         >
                           {format(day, "d")}
                         </div>
-                        {holiday && (
-                          <div className="text-xs text-red-600" title={holiday}>
-                            🎌
-                          </div>
-                        )}
+                        {holiday && <span className="text-xs">🎌</span>}
                       </div>
+                      {holiday && (
+                        <p className="text-[10px] text-red-500 leading-tight truncate mb-1">
+                          {holiday}
+                        </p>
+                      )}
                       <div className="space-y-1">
                         {dayOrders.slice(0, 2).map((order) => (
                           <button
