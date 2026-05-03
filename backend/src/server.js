@@ -23,14 +23,21 @@ const openCors = cors();
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(helmet());
+
+// CORS must run before rate limiters so 429 responses include Allow-Origin header
+app.use("/api/services", openCors);
+app.use("/api/auth", strictCors);
+app.use("/api/customers", strictCors);
+app.use("/api/orders", strictCors);
+
 app.use("/api/", require("./utils/rateLimiter").apiLimiter);
 app.use("/api/auth/login", require("./utils/rateLimiter").loginLimiter);
 
 // Routes
-app.use("/api/auth", strictCors, require("./routes/auth"));
-app.use("/api/services", openCors, require("./routes/services")); 
-app.use("/api/customers", strictCors, require("./routes/customers"));
-app.use("/api/orders", strictCors, require("./routes/orders"));
+app.use("/api/auth", require("./routes/auth"));
+app.use("/api/services", require("./routes/services"));
+app.use("/api/customers", require("./routes/customers"));
+app.use("/api/orders", require("./routes/orders"));
 app.use("/api/webhook", require("./routes/webhook"));
 
 // Health check
