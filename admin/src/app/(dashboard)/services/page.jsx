@@ -148,77 +148,79 @@ function SortableCard({ service, isDragEnabled, onEdit, onToggle, onDelete }) {
   return (
     <div
       ref={setNodeRef}
-      style={{ transform: CSS.Transform.toString(transform), transition, opacity: isDragging ? 0.4 : 1 }}
-      className="p-4 hover:bg-momcha-cream transition-colors"
+      style={{
+        transform: CSS.Transform.toString(transform),
+        transition,
+        opacity: isDragging ? 0.4 : 1,
+        touchAction: isDragEnabled ? "none" : "auto",
+      }}
+      {...(isDragEnabled ? attributes : {})}
+      {...(isDragEnabled ? listeners : {})}
+      className={`p-4 transition-colors select-none ${isDragging ? "bg-momcha-cream" : "hover:bg-momcha-cream"}`}
     >
-      <div className="flex items-start gap-2">
+      <div className="flex-1 min-w-0">
         {isDragEnabled && (
-          <button
-            {...attributes}
-            {...listeners}
-            style={{ touchAction: "none" }}
-            className="cursor-grab active:cursor-grabbing text-momcha-text-light hover:text-momcha-coral pt-0.5 shrink-0"
-          >
-            <GripVertical size={18} />
-          </button>
+          <p className="text-xs text-momcha-text-light mb-1.5">Tahan untuk mengubah urutan</p>
         )}
-        <div className="flex-1 min-w-0">
-          <div className="flex items-start justify-between gap-3 mb-2">
-            <div className="flex-1 min-w-0">
-              <p className="text-sm font-semibold text-momcha-text-dark truncate">{service.name}</p>
-              <p className="text-xs text-momcha-text-light line-clamp-2 mt-0.5">
-                {service.description || "-"}
-              </p>
-            </div>
-            <Badge
-              className={`shrink-0 text-xs ${
-                service.is_active
-                  ? "bg-green-100 text-green-700 border-0"
-                  : "bg-gray-100 text-gray-700 border-0"
-              }`}
-            >
-              {service.is_active ? "Aktif" : "Nonaktif"}
-            </Badge>
+        <div className="flex items-start justify-between gap-3 mb-2">
+          <div className="flex-1 min-w-0">
+            <p className="text-sm font-semibold text-momcha-text-dark truncate">{service.name}</p>
+            <p className="text-xs text-momcha-text-light line-clamp-2 mt-0.5">
+              {service.description || "-"}
+            </p>
           </div>
-          <div className="flex items-center gap-3 mb-3 text-xs text-momcha-text-dark">
-            <span className="font-medium text-momcha-coral">{formatCurrency(service.price)}</span>
-            <span className="text-momcha-text-light">•</span>
-            <div className="flex items-center gap-1">
-              <Clock size={12} className="text-momcha-text-light" />
-              <span>{service.duration_minutes} menit</span>
-            </div>
+          <Badge
+            className={`shrink-0 text-xs ${
+              service.is_active
+                ? "bg-green-100 text-green-700 border-0"
+                : "bg-gray-100 text-gray-700 border-0"
+            }`}
+          >
+            {service.is_active ? "Aktif" : "Nonaktif"}
+          </Badge>
+        </div>
+        <div className="flex items-center gap-3 mb-3 text-xs text-momcha-text-dark">
+          <span className="font-medium text-momcha-coral">{formatCurrency(service.price)}</span>
+          <span className="text-momcha-text-light">•</span>
+          <div className="flex items-center gap-1">
+            <Clock size={12} className="text-momcha-text-light" />
+            <span>{service.duration_minutes} menit</span>
           </div>
-          <div className="flex items-center gap-2">
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => onEdit(service)}
-              className="flex-1 h-8 text-xs text-momcha-coral border-momcha-coral"
-            >
-              <Edit size={12} className="mr-1" />
-              Edit
-            </Button>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => onToggle(service)}
-              className={`h-8 w-8 p-0 ${
-                service.is_active
-                  ? "text-yellow-600 border-yellow-600"
-                  : "text-green-600 border-green-600"
-              }`}
-            >
-              <Power size={14} />
-            </Button>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => onDelete(service)}
-              className="h-8 w-8 p-0 text-red-600 border-red-600"
-            >
-              <Trash2 size={14} />
-            </Button>
-          </div>
+        </div>
+        <div className="flex items-center gap-2">
+          <Button
+            variant="outline"
+            size="sm"
+            onPointerDown={(e) => e.stopPropagation()}
+            onClick={() => onEdit(service)}
+            className="flex-1 h-8 text-xs text-momcha-coral border-momcha-coral"
+          >
+            <Edit size={12} className="mr-1" />
+            Edit
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            onPointerDown={(e) => e.stopPropagation()}
+            onClick={() => onToggle(service)}
+            className={`h-8 w-8 p-0 ${
+              service.is_active
+                ? "text-yellow-600 border-yellow-600"
+                : "text-green-600 border-green-600"
+            }`}
+          >
+            <Power size={14} />
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            onPointerDown={(e) => e.stopPropagation()}
+            onClick={() => onDelete(service)}
+            className="h-8 w-8 p-0 text-red-600 border-red-600"
+          >
+            <Trash2 size={14} />
+          </Button>
+        </div>
         </div>
       </div>
     </div>
@@ -279,7 +281,7 @@ export default function ServicesPage() {
 
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 8 } }),
-    useSensor(TouchSensor, { activationConstraint: { delay: 250, tolerance: 5 } }),
+    useSensor(TouchSensor, { activationConstraint: { delay: 500, tolerance: 8 } }),
     useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates }),
   );
 
@@ -570,8 +572,7 @@ export default function ServicesPage() {
           <p className="text-xs text-momcha-text-light flex items-center gap-1">
             {isDragEnabled ? (
               <>
-                <GripVertical size={12} />
-                Seret untuk mengubah urutan tampilan
+                Tahan card (mobile) atau seret icon ⠿ (desktop) untuk mengubah urutan
                 {reorderLoading && <Loader2 size={10} className="animate-spin ml-1" />}
               </>
             ) : (
