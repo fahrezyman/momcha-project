@@ -64,6 +64,7 @@ function SortableRow({ service, isDragEnabled, onEdit, onToggle, onDelete }) {
           <button
             {...attributes}
             {...listeners}
+            style={{ touchAction: "none" }}
             className="cursor-grab active:cursor-grabbing text-momcha-text-light hover:text-momcha-coral p-1 rounded"
             title="Seret untuk mengubah urutan"
           >
@@ -155,6 +156,7 @@ function SortableCard({ service, isDragEnabled, onEdit, onToggle, onDelete }) {
           <button
             {...attributes}
             {...listeners}
+            style={{ touchAction: "none" }}
             className="cursor-grab active:cursor-grabbing text-momcha-text-light hover:text-momcha-coral pt-0.5 shrink-0"
           >
             <GripVertical size={18} />
