@@ -8,28 +8,13 @@ require("dotenv").config({ path: path.resolve(process.cwd(), `.env.${env}`) });
 
 const app = express();
 
-// Middleware
-const allowedOrigins = process.env.ALLOWED_ORIGINS?.split(",") || [];
-const strictCors = cors({
-  origin: (origin, callback) => {
-    if (!origin) return callback(null, true);
-    if (allowedOrigins.includes(origin)) return callback(null, true);
-    callback(new Error(`CORS: origin ${origin} not allowed`));
-  },
-  credentials: true,
-});
-const openCors = cors();
+// Global CORS — runs before rate limiters so 429 responses always include Allow-Origin header.
+// Auth security is handled by JWT middleware, not CORS origin restriction.
+app.use(cors({ origin: true, credentials: true }));
 
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(helmet());
-
-// CORS must run before rate limiters so 429 responses include Allow-Origin header
-app.use("/api/services", openCors);
-app.use("/api/auth", strictCors);
-app.use("/api/customers", strictCors);
-app.use("/api/orders", strictCors);
-
 app.use("/api/", require("./utils/rateLimiter").apiLimiter);
 app.use("/api/auth/login", require("./utils/rateLimiter").loginLimiter);
 
