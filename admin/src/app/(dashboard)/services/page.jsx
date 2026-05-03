@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useMemo } from "react";
 import { api } from "@/lib/api";
 import { formatCurrency } from "@/constants";
 import { Button } from "@/components/ui/button";
@@ -23,15 +23,242 @@ import {
   Power,
   Loader2,
   Clock,
+  GripVertical,
+  ArrowUpDown,
+  ArrowUp,
+  ArrowDown,
 } from "lucide-react";
 import { toast } from "sonner";
 import { TableRowsSkeleton } from "@/components/skeletons";
+import {
+  DndContext,
+  closestCenter,
+  PointerSensor,
+  KeyboardSensor,
+  TouchSensor,
+  useSensor,
+  useSensors,
+} from "@dnd-kit/core";
+import {
+  SortableContext,
+  sortableKeyboardCoordinates,
+  verticalListSortingStrategy,
+  useSortable,
+  arrayMove,
+} from "@dnd-kit/sortable";
+import { CSS } from "@dnd-kit/utilities";
 
+// --- Sortable Desktop Row ---
+function SortableRow({ service, isDragEnabled, onEdit, onToggle, onDelete }) {
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } =
+    useSortable({ id: service.id, disabled: !isDragEnabled });
+
+  return (
+    <tr
+      ref={setNodeRef}
+      style={{ transform: CSS.Transform.toString(transform), transition, opacity: isDragging ? 0.4 : 1 }}
+      className="hover:bg-momcha-cream transition-colors"
+    >
+      <td className="px-3 py-4 w-10">
+        {isDragEnabled ? (
+          <button
+            {...attributes}
+            {...listeners}
+            className="cursor-grab active:cursor-grabbing text-momcha-text-light hover:text-momcha-coral p-1 rounded"
+            title="Seret untuk mengubah urutan"
+          >
+            <GripVertical size={16} />
+          </button>
+        ) : (
+          <div className="w-7" />
+        )}
+      </td>
+      <td className="px-4 py-4">
+        <p className="text-sm font-medium text-momcha-text-dark">{service.name}</p>
+      </td>
+      <td className="px-4 py-4">
+        <p className="text-sm text-momcha-text-light line-clamp-2 max-w-xs">
+          {service.description || "-"}
+        </p>
+      </td>
+      <td className="px-4 py-4">
+        <p className="text-sm font-medium text-momcha-text-dark">
+          {formatCurrency(service.price)}
+        </p>
+      </td>
+      <td className="px-4 py-4">
+        <div className="flex items-center gap-2 text-sm text-momcha-text-dark">
+          <Clock size={14} className="text-momcha-text-light" />
+          {service.duration_minutes} menit
+        </div>
+      </td>
+      <td className="px-4 py-4">
+        <Badge
+          className={
+            service.is_active
+              ? "bg-green-100 text-green-700 border-0"
+              : "bg-gray-100 text-gray-700 border-0"
+          }
+        >
+          {service.is_active ? "Aktif" : "Nonaktif"}
+        </Badge>
+      </td>
+      <td className="px-4 py-4">
+        <div className="flex items-center justify-end gap-2">
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => onEdit(service)}
+            className="text-momcha-coral hover:bg-momcha-cream"
+          >
+            <Edit size={16} />
+          </Button>
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => onToggle(service)}
+            className={
+              service.is_active
+                ? "text-yellow-600 hover:bg-yellow-50"
+                : "text-green-600 hover:bg-green-50"
+            }
+          >
+            <Power size={16} />
+          </Button>
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => onDelete(service)}
+            className="text-red-600 hover:bg-red-50"
+          >
+            <Trash2 size={16} />
+          </Button>
+        </div>
+      </td>
+    </tr>
+  );
+}
+
+// --- Sortable Mobile Card ---
+function SortableCard({ service, isDragEnabled, onEdit, onToggle, onDelete }) {
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } =
+    useSortable({ id: service.id, disabled: !isDragEnabled });
+
+  return (
+    <div
+      ref={setNodeRef}
+      style={{ transform: CSS.Transform.toString(transform), transition, opacity: isDragging ? 0.4 : 1 }}
+      className="p-4 hover:bg-momcha-cream transition-colors"
+    >
+      <div className="flex items-start gap-2">
+        {isDragEnabled && (
+          <button
+            {...attributes}
+            {...listeners}
+            className="cursor-grab active:cursor-grabbing text-momcha-text-light hover:text-momcha-coral pt-0.5 shrink-0"
+          >
+            <GripVertical size={18} />
+          </button>
+        )}
+        <div className="flex-1 min-w-0">
+          <div className="flex items-start justify-between gap-3 mb-2">
+            <div className="flex-1 min-w-0">
+              <p className="text-sm font-semibold text-momcha-text-dark truncate">{service.name}</p>
+              <p className="text-xs text-momcha-text-light line-clamp-2 mt-0.5">
+                {service.description || "-"}
+              </p>
+            </div>
+            <Badge
+              className={`shrink-0 text-xs ${
+                service.is_active
+                  ? "bg-green-100 text-green-700 border-0"
+                  : "bg-gray-100 text-gray-700 border-0"
+              }`}
+            >
+              {service.is_active ? "Aktif" : "Nonaktif"}
+            </Badge>
+          </div>
+          <div className="flex items-center gap-3 mb-3 text-xs text-momcha-text-dark">
+            <span className="font-medium text-momcha-coral">{formatCurrency(service.price)}</span>
+            <span className="text-momcha-text-light">•</span>
+            <div className="flex items-center gap-1">
+              <Clock size={12} className="text-momcha-text-light" />
+              <span>{service.duration_minutes} menit</span>
+            </div>
+          </div>
+          <div className="flex items-center gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => onEdit(service)}
+              className="flex-1 h-8 text-xs text-momcha-coral border-momcha-coral"
+            >
+              <Edit size={12} className="mr-1" />
+              Edit
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => onToggle(service)}
+              className={`h-8 w-8 p-0 ${
+                service.is_active
+                  ? "text-yellow-600 border-yellow-600"
+                  : "text-green-600 border-green-600"
+              }`}
+            >
+              <Power size={14} />
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => onDelete(service)}
+              className="h-8 w-8 p-0 text-red-600 border-red-600"
+            >
+              <Trash2 size={14} />
+            </Button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// --- Sort Column Header (Desktop) ---
+function SortHeader({ label, field, sortField, sortDir, onSort }) {
+  const isActive = sortField === field;
+  return (
+    <button
+      onClick={() => onSort(field)}
+      className={`flex items-center gap-1 group text-xs font-medium transition-colors ${
+        isActive ? "text-momcha-coral" : "text-momcha-text-dark hover:text-momcha-coral"
+      }`}
+    >
+      {label}
+      {isActive ? (
+        sortDir === "asc" ? <ArrowUp size={11} /> : <ArrowDown size={11} />
+      ) : (
+        <ArrowUpDown size={11} className="opacity-40 group-hover:opacity-80" />
+      )}
+    </button>
+  );
+}
+
+const SORT_OPTIONS = [
+  { field: "name", label: "Nama" },
+  { field: "price", label: "Harga" },
+  { field: "duration_minutes", label: "Durasi" },
+  { field: "is_active", label: "Status" },
+];
+
+// --- Main Page ---
 export default function ServicesPage() {
   const [services, setServices] = useState([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
   const [showActiveOnly, setShowActiveOnly] = useState(false);
+  const [sortField, setSortField] = useState(null);
+  const [sortDir, setSortDir] = useState("asc");
+  const [reorderLoading, setReorderLoading] = useState(false);
 
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
@@ -48,6 +275,12 @@ export default function ServicesPage() {
     duration_minutes: "",
   });
 
+  const sensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 8 } }),
+    useSensor(TouchSensor, { activationConstraint: { delay: 250, tolerance: 5 } }),
+    useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates }),
+  );
+
   useEffect(() => {
     loadServices();
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -58,10 +291,7 @@ export default function ServicesPage() {
       setLoading(true);
       const params = showActiveOnly ? "?is_active=true" : "";
       const res = await api.getServices(params);
-
-      if (res.success) {
-        setServices(res.data);
-      }
+      if (res.success) setServices(res.data);
     } catch (error) {
       console.error("Load services error:", error);
       toast.error("Gagal memuat data service");
@@ -70,22 +300,76 @@ export default function ServicesPage() {
     }
   }
 
-  const filteredServices = services.filter((service) => {
-    if (!search) return true;
-    const searchLower = search.toLowerCase();
-    return (
-      service.name.toLowerCase().includes(searchLower) ||
-      service.description?.toLowerCase().includes(searchLower)
-    );
-  });
+  const filteredServices = useMemo(
+    () =>
+      services.filter((s) => {
+        if (!search) return true;
+        const q = search.toLowerCase();
+        return s.name.toLowerCase().includes(q) || s.description?.toLowerCase().includes(q);
+      }),
+    [services, search],
+  );
+
+  const displayedServices = useMemo(() => {
+    if (!sortField) return filteredServices;
+    return [...filteredServices].sort((a, b) => {
+      let aVal = a[sortField];
+      let bVal = b[sortField];
+      if (sortField === "price" || sortField === "duration_minutes" || sortField === "is_active") {
+        aVal = Number(aVal);
+        bVal = Number(bVal);
+      } else {
+        aVal = String(aVal ?? "").toLowerCase();
+        bVal = String(bVal ?? "").toLowerCase();
+      }
+      if (aVal < bVal) return sortDir === "asc" ? -1 : 1;
+      if (aVal > bVal) return sortDir === "asc" ? 1 : -1;
+      return 0;
+    });
+  }, [filteredServices, sortField, sortDir]);
+
+  const isDragEnabled = !sortField && !search;
+
+  function handleSort(field) {
+    if (sortField === field) {
+      if (sortDir === "asc") {
+        setSortDir("desc");
+      } else {
+        setSortField(null);
+        setSortDir("asc");
+      }
+    } else {
+      setSortField(field);
+      setSortDir("asc");
+    }
+  }
+
+  const handleDragEnd = useCallback(
+    async (event) => {
+      const { active, over } = event;
+      if (!over || active.id === over.id) return;
+
+      const oldIndex = services.findIndex((s) => s.id === active.id);
+      const newIndex = services.findIndex((s) => s.id === over.id);
+      const newOrder = arrayMove(services, oldIndex, newIndex);
+      setServices(newOrder);
+
+      setReorderLoading(true);
+      try {
+        await api.reorderServices(newOrder.map((s, i) => ({ id: s.id, sort_order: i + 1 })));
+      } catch {
+        toast.error("Gagal menyimpan urutan");
+        loadServices();
+      } finally {
+        setReorderLoading(false);
+      }
+    },
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [services],
+  );
 
   function resetForm() {
-    setFormData({
-      name: "",
-      description: "",
-      price: "",
-      duration_minutes: "",
-    });
+    setFormData({ name: "", description: "", price: "", duration_minutes: "" });
   }
 
   function openCreateModal() {
@@ -109,11 +393,9 @@ export default function ServicesPage() {
       toast.error("Nama, harga, dan durasi wajib diisi");
       return;
     }
-
     try {
       setActionLoading(true);
       const res = await api.createService(formData);
-
       if (res.success) {
         toast.success("Service berhasil dibuat!");
         setShowCreateModal(false);
@@ -135,11 +417,9 @@ export default function ServicesPage() {
       toast.error("Nama, harga, dan durasi wajib diisi");
       return;
     }
-
     try {
       setActionLoading(true);
       const res = await api.updateService(editingService.id, formData);
-
       if (res.success) {
         toast.success("Service berhasil diupdate!");
         setShowEditModal(false);
@@ -164,19 +444,12 @@ export default function ServicesPage() {
 
   async function confirmToggle() {
     if (!selectedService) return;
-
     const newStatus = !selectedService.is_active;
-
     try {
       setActionLoading(true);
-      const res = await api.updateService(selectedService.id, {
-        is_active: newStatus,
-      });
-
+      const res = await api.updateService(selectedService.id, { is_active: newStatus });
       if (res.success) {
-        toast.success(
-          `Service berhasil ${newStatus ? "diaktifkan" : "dinonaktifkan"}!`,
-        );
+        toast.success(`Service berhasil ${newStatus ? "diaktifkan" : "dinonaktifkan"}!`);
         setShowToggleModal(false);
         loadServices();
       } else {
@@ -197,11 +470,9 @@ export default function ServicesPage() {
 
   async function confirmDelete() {
     if (!selectedService) return;
-
     try {
       setActionLoading(true);
       const res = await api.deleteService(selectedService.id);
-
       if (res.success) {
         toast.success("Service berhasil dihapus!");
         setShowDeleteModal(false);
@@ -219,15 +490,11 @@ export default function ServicesPage() {
 
   return (
     <div className="space-y-4 lg:space-y-6">
-      {/* Header - Responsive */}
+      {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
         <div>
-          <h1 className="text-xl lg:text-2xl font-bold text-momcha-text-dark">
-            Services
-          </h1>
-          <p className="text-sm text-momcha-text-light">
-            Kelola service yang ditawarkan
-          </p>
+          <h1 className="text-xl lg:text-2xl font-bold text-momcha-text-dark">Services</h1>
+          <p className="text-sm text-momcha-text-light">Kelola service yang ditawarkan</p>
         </div>
         <Button
           onClick={openCreateModal}
@@ -238,11 +505,11 @@ export default function ServicesPage() {
         </Button>
       </div>
 
-      {/* Filters - Responsive */}
+      {/* Filters */}
       <Card className="border-momcha-peach">
-        <CardContent className="pt-4 lg:pt-6">
+        <CardContent className="pt-4 lg:pt-6 space-y-3">
+          {/* Search + Active toggle */}
           <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 sm:gap-4">
-            {/* Search */}
             <div className="relative flex-1">
               <Search
                 className="absolute left-3 top-1/2 -translate-y-1/2 text-momcha-text-light"
@@ -255,225 +522,171 @@ export default function ServicesPage() {
                 className="pl-9 h-9 text-sm"
               />
             </div>
-
-            {/* Filter Active */}
             <Button
               variant={showActiveOnly ? "default" : "outline"}
               onClick={() => setShowActiveOnly(!showActiveOnly)}
-              className={`h-9 text-sm ${
-                showActiveOnly ? "bg-momcha-coral hover:bg-momcha-brown" : ""
-              }`}
+              className={`h-9 text-sm ${showActiveOnly ? "bg-momcha-coral hover:bg-momcha-brown" : ""}`}
             >
               {showActiveOnly ? "Semua Service" : "Aktif Saja"}
             </Button>
           </div>
+
+          {/* Sort buttons (mobile only) */}
+          <div className="lg:hidden flex items-center gap-2 flex-wrap">
+            <span className="text-xs text-momcha-text-light">Sortir:</span>
+            {SORT_OPTIONS.map(({ field, label }) => (
+              <Button
+                key={field}
+                variant="outline"
+                size="sm"
+                onClick={() => handleSort(field)}
+                className={`h-7 text-xs px-2 flex items-center gap-1 ${
+                  sortField === field ? "border-momcha-coral text-momcha-coral bg-momcha-cream" : ""
+                }`}
+              >
+                {label}
+                {sortField === field ? (
+                  sortDir === "asc" ? <ArrowUp size={10} /> : <ArrowDown size={10} />
+                ) : (
+                  <ArrowUpDown size={10} className="opacity-40" />
+                )}
+              </Button>
+            ))}
+            {sortField && (
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => { setSortField(null); setSortDir("asc"); }}
+                className="h-7 text-xs text-momcha-text-light hover:text-momcha-text-dark"
+              >
+                Reset
+              </Button>
+            )}
+          </div>
+
+          {/* Drag hint */}
+          <p className="text-xs text-momcha-text-light flex items-center gap-1">
+            {isDragEnabled ? (
+              <>
+                <GripVertical size={12} />
+                Seret untuk mengubah urutan tampilan
+                {reorderLoading && <Loader2 size={10} className="animate-spin ml-1" />}
+              </>
+            ) : (
+              "Hapus pencarian/sortir untuk mengubah urutan"
+            )}
+          </p>
         </CardContent>
       </Card>
 
-      {/* Services - Mobile: Cards, Desktop: Table */}
+      {/* Services List */}
       <Card className="border-momcha-peach">
         <CardContent className="p-0">
           {loading ? (
             <TableRowsSkeleton rows={4} />
-          ) : filteredServices.length === 0 ? (
+          ) : displayedServices.length === 0 ? (
             <div className="text-center py-12 text-momcha-text-light">
               <p className="text-sm">Tidak ada service yang ditemukan</p>
             </div>
           ) : (
-            <>
-              {/* MOBILE VIEW - Cards */}
-              <div className="lg:hidden divide-y divide-momcha-peach">
-                {filteredServices.map((service) => (
-                  <div
-                    key={service.id}
-                    className="p-4 hover:bg-momcha-cream transition-colors"
-                  >
-                    {/* Header */}
-                    <div className="flex items-start justify-between gap-3 mb-2">
-                      <div className="flex-1 min-w-0">
-                        <p className="text-sm font-semibold text-momcha-text-dark truncate">
-                          {service.name}
-                        </p>
-                        <p className="text-xs text-momcha-text-light line-clamp-2 mt-0.5">
-                          {service.description || "-"}
-                        </p>
-                      </div>
-                      <Badge
-                        className={`shrink-0 text-xs ${
-                          service.is_active
-                            ? "bg-green-100 text-green-700 border-0"
-                            : "bg-gray-100 text-gray-700 border-0"
-                        }`}
-                      >
-                        {service.is_active ? "Aktif" : "Nonaktif"}
-                      </Badge>
-                    </div>
+            <DndContext
+              sensors={sensors}
+              collisionDetection={closestCenter}
+              onDragEnd={handleDragEnd}
+            >
+              <SortableContext
+                items={displayedServices.map((s) => s.id)}
+                strategy={verticalListSortingStrategy}
+              >
+                {/* MOBILE VIEW */}
+                <div className="lg:hidden divide-y divide-momcha-peach">
+                  {displayedServices.map((service) => (
+                    <SortableCard
+                      key={service.id}
+                      service={service}
+                      isDragEnabled={isDragEnabled}
+                      onEdit={openEditModal}
+                      onToggle={openToggleModal}
+                      onDelete={openDeleteModal}
+                    />
+                  ))}
+                </div>
 
-                    {/* Info */}
-                    <div className="flex items-center gap-3 mb-3 text-xs text-momcha-text-dark">
-                      <span className="font-medium text-momcha-coral">
-                        {formatCurrency(service.price)}
-                      </span>
-                      <span className="text-momcha-text-light">•</span>
-                      <div className="flex items-center gap-1">
-                        <Clock size={12} className="text-momcha-text-light" />
-                        <span>{service.duration_minutes} menit</span>
-                      </div>
-                    </div>
-
-                    {/* Actions */}
-                    <div className="flex items-center gap-2">
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => openEditModal(service)}
-                        className="flex-1 h-8 text-xs text-momcha-coral border-momcha-coral"
-                      >
-                        <Edit size={12} className="mr-1" />
-                        Edit
-                      </Button>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => openToggleModal(service)}
-                        className={`h-8 w-8 p-0 ${
-                          service.is_active
-                            ? "text-yellow-600 border-yellow-600"
-                            : "text-green-600 border-green-600"
-                        }`}
-                      >
-                        <Power size={14} />
-                      </Button>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => openDeleteModal(service)}
-                        className="h-8 w-8 p-0 text-red-600 border-red-600"
-                      >
-                        <Trash2 size={14} />
-                      </Button>
-                    </div>
-                  </div>
-                ))}
-              </div>
-
-              {/* DESKTOP VIEW - Table */}
-              <div className="hidden lg:block overflow-x-auto">
-                <table className="w-full">
-                  <thead className="bg-momcha-cream border-b border-momcha-peach">
-                    <tr>
-                      <th className="text-left px-6 py-3 text-xs font-medium text-momcha-text-dark">
-                        Service
-                      </th>
-                      <th className="text-left px-6 py-3 text-xs font-medium text-momcha-text-dark">
-                        Deskripsi
-                      </th>
-                      <th className="text-left px-6 py-3 text-xs font-medium text-momcha-text-dark">
-                        Harga
-                      </th>
-                      <th className="text-left px-6 py-3 text-xs font-medium text-momcha-text-dark">
-                        Durasi
-                      </th>
-                      <th className="text-left px-6 py-3 text-xs font-medium text-momcha-text-dark">
-                        Status
-                      </th>
-                      <th className="text-right px-6 py-3 text-xs font-medium text-momcha-text-dark">
-                        Aksi
-                      </th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-momcha-peach">
-                    {filteredServices.map((service) => (
-                      <tr
-                        key={service.id}
-                        className="hover:bg-momcha-cream transition-colors"
-                      >
-                        <td className="px-6 py-4">
-                          <p className="text-sm font-medium text-momcha-text-dark">
-                            {service.name}
-                          </p>
-                        </td>
-                        <td className="px-6 py-4">
-                          <p className="text-sm text-momcha-text-light line-clamp-2 max-w-xs">
-                            {service.description || "-"}
-                          </p>
-                        </td>
-                        <td className="px-6 py-4">
-                          <p className="text-sm font-medium text-momcha-text-dark">
-                            {formatCurrency(service.price)}
-                          </p>
-                        </td>
-                        <td className="px-6 py-4">
-                          <div className="flex items-center gap-2 text-sm text-momcha-text-dark">
-                            <Clock
-                              size={14}
-                              className="text-momcha-text-light"
-                            />
-                            {service.duration_minutes} menit
-                          </div>
-                        </td>
-                        <td className="px-6 py-4">
-                          <Badge
-                            className={
-                              service.is_active
-                                ? "bg-green-100 text-green-700 border-0"
-                                : "bg-gray-100 text-gray-700 border-0"
-                            }
-                          >
-                            {service.is_active ? "Aktif" : "Nonaktif"}
-                          </Badge>
-                        </td>
-                        <td className="px-6 py-4">
-                          <div className="flex items-center justify-end gap-2">
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => openEditModal(service)}
-                              className="text-momcha-coral hover:bg-momcha-cream"
-                            >
-                              <Edit size={16} />
-                            </Button>
-
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => openToggleModal(service)}
-                              className={
-                                service.is_active
-                                  ? "text-yellow-600 hover:bg-yellow-50"
-                                  : "text-green-600 hover:bg-green-50"
-                              }
-                            >
-                              <Power size={16} />
-                            </Button>
-
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => openDeleteModal(service)}
-                              className="text-red-600 hover:bg-red-50"
-                            >
-                              <Trash2 size={16} />
-                            </Button>
-                          </div>
-                        </td>
+                {/* DESKTOP VIEW */}
+                <div className="hidden lg:block overflow-x-auto">
+                  <table className="w-full">
+                    <thead className="bg-momcha-cream border-b border-momcha-peach">
+                      <tr>
+                        <th className="px-3 py-3 w-10" />
+                        <th className="text-left px-4 py-3">
+                          <SortHeader
+                            label="Service"
+                            field="name"
+                            sortField={sortField}
+                            sortDir={sortDir}
+                            onSort={handleSort}
+                          />
+                        </th>
+                        <th className="text-left px-4 py-3 text-xs font-medium text-momcha-text-dark">
+                          Deskripsi
+                        </th>
+                        <th className="text-left px-4 py-3">
+                          <SortHeader
+                            label="Harga"
+                            field="price"
+                            sortField={sortField}
+                            sortDir={sortDir}
+                            onSort={handleSort}
+                          />
+                        </th>
+                        <th className="text-left px-4 py-3">
+                          <SortHeader
+                            label="Durasi"
+                            field="duration_minutes"
+                            sortField={sortField}
+                            sortDir={sortDir}
+                            onSort={handleSort}
+                          />
+                        </th>
+                        <th className="text-left px-4 py-3">
+                          <SortHeader
+                            label="Status"
+                            field="is_active"
+                            sortField={sortField}
+                            sortDir={sortDir}
+                            onSort={handleSort}
+                          />
+                        </th>
+                        <th className="text-right px-4 py-3 text-xs font-medium text-momcha-text-dark">
+                          Aksi
+                        </th>
                       </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            </>
+                    </thead>
+                    <tbody className="divide-y divide-momcha-peach">
+                      {displayedServices.map((service) => (
+                        <SortableRow
+                          key={service.id}
+                          service={service}
+                          isDragEnabled={isDragEnabled}
+                          onEdit={openEditModal}
+                          onToggle={openToggleModal}
+                          onDelete={openDeleteModal}
+                        />
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </SortableContext>
+            </DndContext>
           )}
         </CardContent>
       </Card>
 
-      {/* Create Modal - Responsive */}
+      {/* Create Modal */}
       <Dialog open={showCreateModal} onOpenChange={setShowCreateModal}>
         <DialogContent className="max-w-md w-[calc(100%-2rem)] sm:w-full max-h-[90vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle className="text-base sm:text-lg">
-              Tambah Service Baru
-            </DialogTitle>
+            <DialogTitle className="text-base sm:text-lg">Tambah Service Baru</DialogTitle>
             <DialogDescription className="text-xs sm:text-sm">
               Isi form di bawah untuk menambah service
             </DialogDescription>
@@ -487,25 +700,19 @@ export default function ServicesPage() {
               <Input
                 placeholder="Contoh: Pijat Laktasi"
                 value={formData.name}
-                onChange={(e) =>
-                  setFormData({ ...formData, name: e.target.value })
-                }
+                onChange={(e) => setFormData({ ...formData, name: e.target.value })}
                 className="h-9 text-sm"
               />
             </div>
 
             <div className="space-y-1.5">
-              <label className="text-xs sm:text-sm font-medium">
-                Deskripsi
-              </label>
+              <label className="text-xs sm:text-sm font-medium">Deskripsi</label>
               <textarea
                 className="w-full px-2 sm:px-3 py-1.5 sm:py-2 border rounded-lg text-xs sm:text-sm resize-none focus:outline-none focus:ring-2 focus:ring-momcha-coral"
                 rows="3"
                 placeholder="Deskripsi singkat service"
                 value={formData.description}
-                onChange={(e) =>
-                  setFormData({ ...formData, description: e.target.value })
-                }
+                onChange={(e) => setFormData({ ...formData, description: e.target.value })}
               />
             </div>
 
@@ -518,13 +725,10 @@ export default function ServicesPage() {
                   type="number"
                   placeholder="150000"
                   value={formData.price}
-                  onChange={(e) =>
-                    setFormData({ ...formData, price: e.target.value })
-                  }
+                  onChange={(e) => setFormData({ ...formData, price: e.target.value })}
                   className="h-9 text-sm"
                 />
               </div>
-
               <div className="space-y-1.5">
                 <label className="text-xs sm:text-sm font-medium">
                   Durasi (menit) <span className="text-red-500">*</span>
@@ -534,10 +738,7 @@ export default function ServicesPage() {
                   placeholder="60"
                   value={formData.duration_minutes}
                   onChange={(e) =>
-                    setFormData({
-                      ...formData,
-                      duration_minutes: e.target.value,
-                    })
+                    setFormData({ ...formData, duration_minutes: e.target.value })
                   }
                   className="h-9 text-sm"
                 />
@@ -572,13 +773,11 @@ export default function ServicesPage() {
         </DialogContent>
       </Dialog>
 
-      {/* Edit Modal - Responsive */}
+      {/* Edit Modal */}
       <Dialog open={showEditModal} onOpenChange={setShowEditModal}>
         <DialogContent className="max-w-md w-[calc(100%-2rem)] sm:w-full max-h-[90vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle className="text-base sm:text-lg">
-              Edit Service
-            </DialogTitle>
+            <DialogTitle className="text-base sm:text-lg">Edit Service</DialogTitle>
             <DialogDescription className="text-xs sm:text-sm">
               Update informasi service
             </DialogDescription>
@@ -592,25 +791,19 @@ export default function ServicesPage() {
               <Input
                 placeholder="Contoh: Pijat Laktasi"
                 value={formData.name}
-                onChange={(e) =>
-                  setFormData({ ...formData, name: e.target.value })
-                }
+                onChange={(e) => setFormData({ ...formData, name: e.target.value })}
                 className="h-9 text-sm"
               />
             </div>
 
             <div className="space-y-1.5">
-              <label className="text-xs sm:text-sm font-medium">
-                Deskripsi
-              </label>
+              <label className="text-xs sm:text-sm font-medium">Deskripsi</label>
               <textarea
                 className="w-full px-2 sm:px-3 py-1.5 sm:py-2 border rounded-lg text-xs sm:text-sm resize-none focus:outline-none focus:ring-2 focus:ring-momcha-coral"
                 rows="3"
                 placeholder="Deskripsi singkat service"
                 value={formData.description}
-                onChange={(e) =>
-                  setFormData({ ...formData, description: e.target.value })
-                }
+                onChange={(e) => setFormData({ ...formData, description: e.target.value })}
               />
             </div>
 
@@ -623,13 +816,10 @@ export default function ServicesPage() {
                   type="number"
                   placeholder="150000"
                   value={formData.price}
-                  onChange={(e) =>
-                    setFormData({ ...formData, price: e.target.value })
-                  }
+                  onChange={(e) => setFormData({ ...formData, price: e.target.value })}
                   className="h-9 text-sm"
                 />
               </div>
-
               <div className="space-y-1.5">
                 <label className="text-xs sm:text-sm font-medium">
                   Durasi (menit) <span className="text-red-500">*</span>
@@ -639,10 +829,7 @@ export default function ServicesPage() {
                   placeholder="60"
                   value={formData.duration_minutes}
                   onChange={(e) =>
-                    setFormData({
-                      ...formData,
-                      duration_minutes: e.target.value,
-                    })
+                    setFormData({ ...formData, duration_minutes: e.target.value })
                   }
                   className="h-9 text-sm"
                 />
@@ -695,9 +882,7 @@ export default function ServicesPage() {
             <div className="flex items-center gap-3 p-3 sm:p-4 bg-momcha-cream rounded-lg">
               <Power
                 className={`shrink-0 ${
-                  selectedService?.is_active
-                    ? "text-yellow-600"
-                    : "text-green-600"
+                  selectedService?.is_active ? "text-yellow-600" : "text-green-600"
                 }`}
                 size={20}
               />
@@ -706,8 +891,7 @@ export default function ServicesPage() {
                   {selectedService?.name}
                 </p>
                 <p className="text-xs text-momcha-text-light">
-                  {formatCurrency(selectedService?.price)} ·{" "}
-                  {selectedService?.duration_minutes} menit
+                  {formatCurrency(selectedService?.price)} · {selectedService?.duration_minutes} menit
                 </p>
               </div>
             </div>
@@ -739,9 +923,7 @@ export default function ServicesPage() {
               ) : (
                 <>
                   <Power size={14} className="mr-2" />
-                  {selectedService?.is_active
-                    ? "Ya, Nonaktifkan"
-                    : "Ya, Aktifkan"}
+                  {selectedService?.is_active ? "Ya, Nonaktifkan" : "Ya, Aktifkan"}
                 </>
               )}
             </Button>
@@ -753,9 +935,7 @@ export default function ServicesPage() {
       <Dialog open={showDeleteModal} onOpenChange={setShowDeleteModal}>
         <DialogContent className="max-w-md w-[calc(100%-2rem)] sm:w-full">
           <DialogHeader>
-            <DialogTitle className="text-base sm:text-lg">
-              Hapus Service
-            </DialogTitle>
+            <DialogTitle className="text-base sm:text-lg">Hapus Service</DialogTitle>
             <DialogDescription className="text-xs sm:text-sm">
               service yang dihapus tidak dapat dikembalikan
             </DialogDescription>
@@ -769,8 +949,7 @@ export default function ServicesPage() {
                   {selectedService?.name}
                 </p>
                 <p className="text-xs text-red-700">
-                  {formatCurrency(selectedService?.price)} ·{" "}
-                  {selectedService?.duration_minutes} menit
+                  {formatCurrency(selectedService?.price)} · {selectedService?.duration_minutes} menit
                 </p>
               </div>
             </div>

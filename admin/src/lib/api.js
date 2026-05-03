@@ -90,6 +90,13 @@ class API {
     });
   }
 
+  async reorderServices(order) {
+    return this.fetch("/services/reorder", {
+      method: "PUT",
+      body: JSON.stringify({ order }),
+    });
+  }
+
   // Customers
   async getCustomers(params = "") {
     return this.fetch(`/customers${params}`);
