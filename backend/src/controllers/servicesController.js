@@ -13,7 +13,7 @@ async function getAllServices(req, res) {
       params.push(is_active === "true" ? 1 : 0);
     }
 
-    query += " ORDER BY created_at DESC";
+    query += " ORDER BY sort_order ASC, created_at DESC";
 
     const [rows] = await db.query(query, params);
 
@@ -231,10 +231,39 @@ async function deleteService(req, res) {
   }
 }
 
+// Reorder services
+async function reorderServices(req, res) {
+  try {
+    const { ids } = req.body;
+
+    if (!Array.isArray(ids) || ids.length === 0) {
+      return res.status(400).json({
+        success: false,
+        error: { code: "VALIDATION_ERROR", message: "ids harus berupa array" },
+      });
+    }
+
+    await Promise.all(
+      ids.map((id, index) =>
+        db.query("UPDATE services SET sort_order = ? WHERE id = ?", [index, id]),
+      ),
+    );
+
+    res.json({ success: true, message: "Urutan berhasil disimpan" });
+  } catch (error) {
+    console.error("Reorder services error:", error);
+    res.status(500).json({
+      success: false,
+      error: { code: "SERVER_ERROR", message: "Internal server error" },
+    });
+  }
+}
+
 module.exports = {
   getAllServices,
   getServiceById,
   createService,
   updateService,
   deleteService,
+  reorderServices,
 };

@@ -8,8 +8,6 @@ require("dotenv").config({ path: path.resolve(process.cwd(), `.env.${env}`) });
 
 const app = express();
 
-// Global CORS — runs before rate limiters so 429 responses always include Allow-Origin header.
-// Auth security is handled by JWT middleware, not CORS origin restriction.
 app.use(cors({ origin: true, credentials: true }));
 
 app.use(express.json());

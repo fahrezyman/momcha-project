@@ -1,6 +1,23 @@
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState } from "react";
+import {
+  DndContext,
+  closestCenter,
+  PointerSensor,
+  KeyboardSensor,
+  useSensor,
+  useSensors,
+  DragOverlay,
+} from "@dnd-kit/core";
+import {
+  SortableContext,
+  sortableKeyboardCoordinates,
+  useSortable,
+  verticalListSortingStrategy,
+  arrayMove,
+} from "@dnd-kit/sortable";
+import { CSS } from "@dnd-kit/utilities";
 import { api } from "@/lib/api";
 import { formatCurrency } from "@/constants";
 import { Button } from "@/components/ui/button";
@@ -23,12 +40,125 @@ import {
   Power,
   Loader2,
   Clock,
+  GripVertical,
 } from "lucide-react";
 import { toast } from "sonner";
 import { TableRowsSkeleton } from "@/components/skeletons";
 
+function SortableCard({ service, onEdit, onToggle, onDelete }) {
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } =
+    useSortable({ id: service.id });
+
+  return (
+    <div
+      ref={setNodeRef}
+      style={{
+        transform: CSS.Transform.toString(transform),
+        transition,
+        opacity: isDragging ? 0 : 1,
+      }}
+      className="p-4 hover:bg-momcha-cream transition-colors"
+    >
+      <div className="flex items-start gap-2">
+        <button
+          {...attributes}
+          {...listeners}
+          className="mt-0.5 shrink-0 cursor-grab active:cursor-grabbing touch-none text-gray-300 hover:text-gray-400"
+          tabIndex={-1}
+        >
+          <GripVertical size={16} />
+        </button>
+        <div className="flex-1 min-w-0">
+          <div className="flex items-start justify-between gap-3 mb-2">
+            <div className="flex-1 min-w-0">
+              <p className="text-sm font-semibold text-momcha-text-dark truncate">
+                {service.name}
+              </p>
+              <p className="text-xs text-momcha-text-light line-clamp-2 mt-0.5">
+                {service.description || "-"}
+              </p>
+            </div>
+            <Badge
+              className={`shrink-0 text-xs ${
+                service.is_active
+                  ? "bg-green-100 text-green-700 border-0"
+                  : "bg-gray-100 text-gray-700 border-0"
+              }`}
+            >
+              {service.is_active ? "Aktif" : "Nonaktif"}
+            </Badge>
+          </div>
+
+          <div className="flex items-center gap-3 mb-3 text-xs text-momcha-text-dark">
+            <span className="font-medium text-momcha-coral">
+              {formatCurrency(service.price)}
+            </span>
+            <span className="text-momcha-text-light">•</span>
+            <div className="flex items-center gap-1">
+              <Clock size={12} className="text-momcha-text-light" />
+              <span>{service.duration_minutes} menit</span>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => onEdit(service)}
+              className="flex-1 h-8 text-xs text-momcha-coral border-momcha-coral"
+            >
+              <Edit size={12} className="mr-1" />
+              Edit
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => onToggle(service)}
+              className={`h-8 w-8 p-0 ${
+                service.is_active
+                  ? "text-yellow-600 border-yellow-600"
+                  : "text-green-600 border-green-600"
+              }`}
+            >
+              <Power size={14} />
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => onDelete(service)}
+              className="h-8 w-8 p-0 text-red-600 border-red-600"
+            >
+              <Trash2 size={14} />
+            </Button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function DragCard({ service }) {
+  return (
+    <div className="p-4 bg-white shadow-lg rounded-lg border border-momcha-peach opacity-90">
+      <div className="flex items-start gap-2">
+        <GripVertical size={16} className="mt-0.5 shrink-0 text-gray-400" />
+        <div className="flex-1 min-w-0">
+          <p className="text-sm font-semibold text-momcha-text-dark truncate">
+            {service.name}
+          </p>
+          <p className="text-xs text-momcha-text-light mt-0.5">
+            {formatCurrency(service.price)} · {service.duration_minutes} menit
+          </p>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export default function ServicesPage() {
   const [services, setServices] = useState([]);
+  const [orderedServices, setOrderedServices] = useState([]);
+  const [activeItem, setActiveItem] = useState(null);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
   const [showActiveOnly, setShowActiveOnly] = useState(false);
@@ -48,10 +178,23 @@ export default function ServicesPage() {
     duration_minutes: "",
   });
 
+  const sensors = useSensors(
+    useSensor(PointerSensor, {
+      activationConstraint: { delay: 250, tolerance: 5 },
+    }),
+    useSensor(KeyboardSensor, {
+      coordinateGetter: sortableKeyboardCoordinates,
+    }),
+  );
+
   useEffect(() => {
     loadServices();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [showActiveOnly]);
+
+  useEffect(() => {
+    setOrderedServices(services);
+  }, [services]);
 
   async function loadServices() {
     try {
@@ -70,7 +213,7 @@ export default function ServicesPage() {
     }
   }
 
-  const filteredServices = services.filter((service) => {
+  const filteredServices = orderedServices.filter((service) => {
     if (!search) return true;
     const searchLower = search.toLowerCase();
     return (
@@ -78,6 +221,9 @@ export default function ServicesPage() {
       service.description?.toLowerCase().includes(searchLower)
     );
   });
+
+  const isDraggable = !search && !showActiveOnly;
+  const displayServices = isDraggable ? orderedServices : filteredServices;
 
   function resetForm() {
     setFormData({
@@ -217,9 +363,33 @@ export default function ServicesPage() {
     }
   }
 
+  function handleDragStart(event) {
+    const service = orderedServices.find((s) => s.id === event.active.id);
+    setActiveItem(service || null);
+  }
+
+  async function handleDragEnd(event) {
+    setActiveItem(null);
+    const { active, over } = event;
+    if (!over || active.id === over.id) return;
+
+    const oldIndex = orderedServices.findIndex((s) => s.id === active.id);
+    const newIndex = orderedServices.findIndex((s) => s.id === over.id);
+    const newOrder = arrayMove(orderedServices, oldIndex, newIndex);
+
+    setOrderedServices(newOrder);
+
+    try {
+      await api.reorderServices(newOrder.map((s) => s.id));
+    } catch {
+      toast.error("Gagal menyimpan urutan");
+      setOrderedServices(orderedServices);
+    }
+  }
+
   return (
     <div className="space-y-4 lg:space-y-6">
-      {/* Header - Responsive */}
+      {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
         <div>
           <h1 className="text-xl lg:text-2xl font-bold text-momcha-text-dark">
@@ -238,11 +408,10 @@ export default function ServicesPage() {
         </Button>
       </div>
 
-      {/* Filters - Responsive */}
+      {/* Filters */}
       <Card className="border-momcha-peach">
         <CardContent className="pt-4 lg:pt-6">
           <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 sm:gap-4">
-            {/* Search */}
             <div className="relative flex-1">
               <Search
                 className="absolute left-3 top-1/2 -translate-y-1/2 text-momcha-text-light"
@@ -255,8 +424,6 @@ export default function ServicesPage() {
                 className="pl-9 h-9 text-sm"
               />
             </div>
-
-            {/* Filter Active */}
             <Button
               variant={showActiveOnly ? "default" : "outline"}
               onClick={() => setShowActiveOnly(!showActiveOnly)}
@@ -270,94 +437,120 @@ export default function ServicesPage() {
         </CardContent>
       </Card>
 
-      {/* Services - Mobile: Cards, Desktop: Table */}
+      {/* Services */}
       <Card className="border-momcha-peach">
         <CardContent className="p-0">
           {loading ? (
             <TableRowsSkeleton rows={4} />
-          ) : filteredServices.length === 0 ? (
+          ) : displayServices.length === 0 ? (
             <div className="text-center py-12 text-momcha-text-light">
               <p className="text-sm">Tidak ada service yang ditemukan</p>
             </div>
           ) : (
             <>
-              {/* MOBILE VIEW - Cards */}
-              <div className="lg:hidden divide-y divide-momcha-peach">
-                {filteredServices.map((service) => (
-                  <div
-                    key={service.id}
-                    className="p-4 hover:bg-momcha-cream transition-colors"
+              {/* MOBILE VIEW - Cards with DnD */}
+              <div className="lg:hidden">
+                {isDraggable ? (
+                  <DndContext
+                    sensors={sensors}
+                    collisionDetection={closestCenter}
+                    onDragStart={handleDragStart}
+                    onDragEnd={handleDragEnd}
                   >
-                    {/* Header */}
-                    <div className="flex items-start justify-between gap-3 mb-2">
-                      <div className="flex-1 min-w-0">
-                        <p className="text-sm font-semibold text-momcha-text-dark truncate">
-                          {service.name}
-                        </p>
-                        <p className="text-xs text-momcha-text-light line-clamp-2 mt-0.5">
-                          {service.description || "-"}
-                        </p>
+                    <SortableContext
+                      items={orderedServices.map((s) => s.id)}
+                      strategy={verticalListSortingStrategy}
+                    >
+                      <div className="divide-y divide-momcha-peach">
+                        {orderedServices.map((service) => (
+                          <SortableCard
+                            key={service.id}
+                            service={service}
+                            onEdit={openEditModal}
+                            onToggle={openToggleModal}
+                            onDelete={openDeleteModal}
+                          />
+                        ))}
                       </div>
-                      <Badge
-                        className={`shrink-0 text-xs ${
-                          service.is_active
-                            ? "bg-green-100 text-green-700 border-0"
-                            : "bg-gray-100 text-gray-700 border-0"
-                        }`}
+                    </SortableContext>
+                    <DragOverlay>
+                      {activeItem && <DragCard service={activeItem} />}
+                    </DragOverlay>
+                  </DndContext>
+                ) : (
+                  <div className="divide-y divide-momcha-peach">
+                    {filteredServices.map((service) => (
+                      <div
+                        key={service.id}
+                        className="p-4 hover:bg-momcha-cream transition-colors"
                       >
-                        {service.is_active ? "Aktif" : "Nonaktif"}
-                      </Badge>
-                    </div>
-
-                    {/* Info */}
-                    <div className="flex items-center gap-3 mb-3 text-xs text-momcha-text-dark">
-                      <span className="font-medium text-momcha-coral">
-                        {formatCurrency(service.price)}
-                      </span>
-                      <span className="text-momcha-text-light">•</span>
-                      <div className="flex items-center gap-1">
-                        <Clock size={12} className="text-momcha-text-light" />
-                        <span>{service.duration_minutes} menit</span>
+                        <div className="flex items-start justify-between gap-3 mb-2">
+                          <div className="flex-1 min-w-0">
+                            <p className="text-sm font-semibold text-momcha-text-dark truncate">
+                              {service.name}
+                            </p>
+                            <p className="text-xs text-momcha-text-light line-clamp-2 mt-0.5">
+                              {service.description || "-"}
+                            </p>
+                          </div>
+                          <Badge
+                            className={`shrink-0 text-xs ${
+                              service.is_active
+                                ? "bg-green-100 text-green-700 border-0"
+                                : "bg-gray-100 text-gray-700 border-0"
+                            }`}
+                          >
+                            {service.is_active ? "Aktif" : "Nonaktif"}
+                          </Badge>
+                        </div>
+                        <div className="flex items-center gap-3 mb-3 text-xs text-momcha-text-dark">
+                          <span className="font-medium text-momcha-coral">
+                            {formatCurrency(service.price)}
+                          </span>
+                          <span className="text-momcha-text-light">•</span>
+                          <div className="flex items-center gap-1">
+                            <Clock size={12} className="text-momcha-text-light" />
+                            <span>{service.duration_minutes} menit</span>
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => openEditModal(service)}
+                            className="flex-1 h-8 text-xs text-momcha-coral border-momcha-coral"
+                          >
+                            <Edit size={12} className="mr-1" />
+                            Edit
+                          </Button>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => openToggleModal(service)}
+                            className={`h-8 w-8 p-0 ${
+                              service.is_active
+                                ? "text-yellow-600 border-yellow-600"
+                                : "text-green-600 border-green-600"
+                            }`}
+                          >
+                            <Power size={14} />
+                          </Button>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => openDeleteModal(service)}
+                            className="h-8 w-8 p-0 text-red-600 border-red-600"
+                          >
+                            <Trash2 size={14} />
+                          </Button>
+                        </div>
                       </div>
-                    </div>
-
-                    {/* Actions */}
-                    <div className="flex items-center gap-2">
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => openEditModal(service)}
-                        className="flex-1 h-8 text-xs text-momcha-coral border-momcha-coral"
-                      >
-                        <Edit size={12} className="mr-1" />
-                        Edit
-                      </Button>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => openToggleModal(service)}
-                        className={`h-8 w-8 p-0 ${
-                          service.is_active
-                            ? "text-yellow-600 border-yellow-600"
-                            : "text-green-600 border-green-600"
-                        }`}
-                      >
-                        <Power size={14} />
-                      </Button>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => openDeleteModal(service)}
-                        className="h-8 w-8 p-0 text-red-600 border-red-600"
-                      >
-                        <Trash2 size={14} />
-                      </Button>
-                    </div>
+                    ))}
                   </div>
-                ))}
+                )}
               </div>
 
-              {/* DESKTOP VIEW - Table */}
+              {/* DESKTOP VIEW - Table (unchanged) */}
               <div className="hidden lg:block overflow-x-auto">
                 <table className="w-full">
                   <thead className="bg-momcha-cream border-b border-momcha-peach">
@@ -383,7 +576,7 @@ export default function ServicesPage() {
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-momcha-peach">
-                    {filteredServices.map((service) => (
+                    {displayServices.map((service) => (
                       <tr
                         key={service.id}
                         className="hover:bg-momcha-cream transition-colors"
@@ -433,7 +626,6 @@ export default function ServicesPage() {
                             >
                               <Edit size={16} />
                             </Button>
-
                             <Button
                               variant="ghost"
                               size="sm"
@@ -446,7 +638,6 @@ export default function ServicesPage() {
                             >
                               <Power size={16} />
                             </Button>
-
                             <Button
                               variant="ghost"
                               size="sm"
@@ -467,7 +658,7 @@ export default function ServicesPage() {
         </CardContent>
       </Card>
 
-      {/* Create Modal - Responsive */}
+      {/* Create Modal */}
       <Dialog open={showCreateModal} onOpenChange={setShowCreateModal}>
         <DialogContent className="max-w-md w-[calc(100%-2rem)] sm:w-full max-h-[90vh] overflow-y-auto">
           <DialogHeader>
@@ -572,7 +763,7 @@ export default function ServicesPage() {
         </DialogContent>
       </Dialog>
 
-      {/* Edit Modal - Responsive */}
+      {/* Edit Modal */}
       <Dialog open={showEditModal} onOpenChange={setShowEditModal}>
         <DialogContent className="max-w-md w-[calc(100%-2rem)] sm:w-full max-h-[90vh] overflow-y-auto">
           <DialogHeader>
