@@ -1,23 +1,19 @@
 "use client";
 
-import { useEffect, useState, useRef } from "react";
-import { useReactToPrint } from "react-to-print";
-import { useRouter, useParams } from "next/navigation";
-import { api } from "@/lib/api";
-import { formatCurrency, formatDate, formatTime, ORDER_STATUS, PAYMENT_STATUS } from "@/constants";
-import { OrderStatusBadge, PaymentStatusBadge } from "@/components/StatusBadge";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
+import { useParams } from "next/navigation";
+import Link from "next/link";
 import { generateInvoicePDF } from "@/lib/generateInvoicePDF";
+import { formatCurrency, formatDate, formatTime } from "@/constants";
+import { OrderStatusBadge, PaymentStatusBadge } from "@/components/StatusBadge";
+import { InfoRow } from "@/components/ui/InfoRow";
+import { EditOrderModal } from "@/components/orders/EditOrderModal";
+import { CancelOrderModal } from "@/components/orders/CancelOrderModal";
+import { MarkPaidModal } from "@/components/orders/MarkPaidModal";
+import { CompleteOrderModal } from "@/components/orders/CompleteOrderModal";
+import { useOrderDetail } from "@/hooks/useOrderDetail";
+import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-  DialogFooter,
-} from "@/components/ui/dialog";
+import { OrderDetailSkeleton } from "@/components/skeletons";
 import {
   ArrowLeft,
   Copy,
@@ -28,313 +24,38 @@ import {
   MapPin,
   Mail,
   Phone,
-  Printer,
   Scissors,
   DollarSign,
   CreditCard,
   FileText,
   X,
-  Loader2,
   Edit,
-  Plus,
-  Trash2,
   FileDown,
 } from "lucide-react";
-import Link from "next/link";
-import { OrderDetailSkeleton } from "@/components/skeletons";
-import { toast } from "sonner";
 
 export default function OrderDetailPage() {
-  const params = useParams();
-  const router = useRouter();
-  const orderId = params.id;
+  const { id: orderId } = useParams();
 
-  const [order, setOrder] = useState(null);
-  const [loading, setLoading] = useState(true);
-  const [copied, setCopied] = useState(false);
-
-  // Modal states
-  const [showEditModal, setShowEditModal] = useState(false);
-  const [showCancelModal, setShowCancelModal] = useState(false);
-  const [showMarkPaidModal, setShowMarkPaidModal] = useState(false);
-  const [showCompleteModal, setShowCompleteModal] = useState(false);
-  const [completeConfirmed, setCompleteConfirmed] = useState(false);
-  const [actionLoading, setActionLoading] = useState(false);
-
-  // Services list
-  const [services, setServices] = useState([]);
-  const [loadingServices, setLoadingServices] = useState(false);
-
-  // Edit form
-  const [editForm, setEditForm] = useState({
-    services: [],
-    service_date: "",
-    service_start_time: "",
-    notes: "",
-  });
-
-  // Cancel form
-  const [cancelReason, setCancelReason] = useState("");
-  const [refundNotes, setRefundNotes] = useState("");
-
-  useEffect(() => {
-    if (orderId) {
-      loadOrder();
-      loadServices();
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [orderId]);
-
-  async function loadOrder() {
-    try {
-      setLoading(true);
-      const res = await api.getOrder(orderId);
-
-      if (res.success) {
-        setOrder(res.data);
-      } else {
-        toast.error("Order tidak ditemukan");
-        router.push("/orders");
-      }
-    } catch (error) {
-      console.error("Load order error:", error);
-      toast.error("Gagal memuat data order");
-    } finally {
-      setLoading(false);
-    }
-  }
-
-  async function loadServices() {
-    try {
-      setLoadingServices(true);
-      const res = await api.getServices("?is_active=true");
-      if (res.success) {
-        setServices(res.data);
-      }
-    } catch (error) {
-      console.error("Load services error:", error);
-    } finally {
-      setLoadingServices(false);
-    }
-  }
-
-  function copyPaymentLink() {
-    if (order?.payment_link) {
-      navigator.clipboard.writeText(order.payment_link);
-      setCopied(true);
-      toast.success("Payment link berhasil disalin!");
-      setTimeout(() => setCopied(false), 2000);
-    }
-  }
-
-  async function markAsPaid() {
-    try {
-      setActionLoading(true);
-      const res = await api.updateOrderStatus(orderId, "paid");
-
-      if (res.success) {
-        toast.success("Order ditandai sebagai sudah dibayar!");
-        setShowMarkPaidModal(false);
-        loadOrder();
-      } else {
-        toast.error(res.error?.message || "Gagal update status");
-      }
-    } catch (error) {
-      console.error("Mark as paid error:", error);
-      toast.error("Terjadi kesalahan");
-    } finally {
-      setActionLoading(false);
-    }
-  }
-
-  async function markAsCompleted() {
-    try {
-      setActionLoading(true);
-      const res = await api.updateOrderStatus(orderId, "completed");
-
-      if (res.success) {
-        toast.success("Order ditandai sebagai selesai!");
-        setShowCompleteModal(false);
-        setCompleteConfirmed(false);
-        loadOrder();
-      } else {
-        toast.error(res.error?.message || "Gagal update status");
-      }
-    } catch (error) {
-      console.error("Mark as completed error:", error);
-      toast.error("Terjadi kesalahan");
-    } finally {
-      setActionLoading(false);
-    }
-  }
-
-  function openEditModal() {
-    setEditForm({
-      services: order.services?.map((s) => ({
-        service_id: s.service_id,
-        quantity: s.quantity,
-        use_custom_price: false,
-        custom_price: "",
-      })) || [
-        {
-          service_id: "",
-          quantity: 1,
-          use_custom_price: false,
-          custom_price: "",
-        },
-      ],
-      service_date: order.service_date,
-      service_start_time: order.service_start_time,
-      notes: order.notes || "",
-    });
-    setShowEditModal(true);
-  }
-
-  async function handleEditOrder() {
-    const validServices = editForm.services.filter((s) => s.service_id);
-
-    if (validServices.length === 0) {
-      toast.error("Pilih minimal 1 layanan");
-      return;
-    }
-
-    if (!editForm.service_date || !editForm.service_start_time) {
-      toast.error("Tanggal dan waktu wajib diisi");
-      return;
-    }
-
-    try {
-      setActionLoading(true);
-
-      const servicesChanged =
-        JSON.stringify(
-          validServices.map((s) => ({
-            service_id: s.service_id,
-            quantity: s.quantity,
-          })),
-        ) !==
-        JSON.stringify(
-          order.services?.map((s) => ({
-            service_id: s.service_id,
-            quantity: s.quantity,
-          })),
-        );
-
-      const dateTimeChanged =
-        editForm.service_date !== order.service_date ||
-        editForm.service_start_time !== order.service_start_time;
-
-      const notesChanged = editForm.notes !== (order.notes || "");
-
-      if (!servicesChanged && !dateTimeChanged && !notesChanged) {
-        toast.info("Tidak ada perubahan");
-        setShowEditModal(false);
-        setActionLoading(false);
-        return;
-      }
-
-      // Step 1: Update services and/or notes if changed
-      if (servicesChanged || notesChanged) {
-        const updatePayload = {
-          // Only send services array when services actually changed to avoid
-          // unnecessary Midtrans transaction recreation
-          ...(servicesChanged && {
-            services: validServices.map((s) => ({
-              service_id: parseInt(s.service_id),
-              quantity: parseInt(s.quantity),
-              ...(s.use_custom_price &&
-                s.custom_price && {
-                  custom_price: parseFloat(s.custom_price),
-                }),
-            })),
-          }),
-          notes: editForm.notes,
-        };
-
-        const updateRes = await api.updateOrder(orderId, updatePayload);
-
-        if (!updateRes.success) {
-          toast.error(updateRes.error?.message || "Gagal mengubah order");
-          setActionLoading(false);
-          return;
-        }
-      }
-
-      if (dateTimeChanged) {
-        const reschedulePayload = {
-          new_date: editForm.service_date,
-          new_time: editForm.service_start_time,
-          reason: servicesChanged
-            ? "Perubahan layanan dan jadwal"
-            : "Perubahan jadwal",
-        };
-
-        const rescheduleRes = await api.rescheduleOrder(
-          orderId,
-          reschedulePayload,
-        );
-
-        if (!rescheduleRes.success) {
-          if (rescheduleRes.error?.code === "SCHEDULE_CONFLICT") {
-            toast.error(
-              `Waktu bentrok dengan order lain: ${rescheduleRes.error.conflict_order?.order_number}`,
-            );
-          } else {
-            toast.error(
-              rescheduleRes.error?.message || "Gagal mengubah jadwal",
-            );
-          }
-          setActionLoading(false);
-          return;
-        }
-      }
-
-      toast.success("Order berhasil diubah!");
-      setShowEditModal(false);
-      loadOrder();
-    } catch (error) {
-      console.error("Edit order error:", error);
-      toast.error("Terjadi kesalahan");
-    } finally {
-      setActionLoading(false);
-    }
-  }
-
-  async function handleCancel() {
-    if (!cancelReason.trim()) {
-      toast.error("Alasan pembatalan wajib diisi");
-      return;
-    }
-
-    if (order.payment_status === "paid" && !refundNotes.trim()) {
-      toast.error("Keterangan refund wajib diisi untuk order yang sudah lunas");
-      return;
-    }
-
-    try {
-      setActionLoading(true);
-      const res = await api.cancelOrder(
-        orderId,
-        cancelReason,
-        order.payment_status === "paid" ? refundNotes : undefined,
-      );
-
-      if (res.success) {
-        toast.success("Order berhasil dibatalkan!");
-        setShowCancelModal(false);
-        setCancelReason("");
-        setRefundNotes("");
-        loadOrder();
-      } else {
-        toast.error(res.error?.message || "Gagal membatalkan order");
-      }
-    } catch (error) {
-      console.error("Cancel error:", error);
-      toast.error("Terjadi kesalahan");
-    } finally {
-      setActionLoading(false);
-    }
-  }
+  const {
+    order, loading,
+    services, loadingServices,
+    copied, actionLoading,
+    showEditModal, setShowEditModal,
+    showCancelModal, setShowCancelModal,
+    showMarkPaidModal, setShowMarkPaidModal,
+    showCompleteModal, setShowCompleteModal,
+    completeConfirmed, setCompleteConfirmed,
+    cancelReason, setCancelReason,
+    refundNotes, setRefundNotes,
+    editForm, setEditForm,
+    copyPaymentLink,
+    markAsPaid,
+    markAsCompleted,
+    openEditModal,
+    handleEditOrder,
+    handleCancel,
+    canEdit, canCancel, canMarkPaid, canComplete,
+  } = useOrderDetail(orderId);
 
   if (loading) return <OrderDetailSkeleton />;
 
@@ -346,26 +67,12 @@ export default function OrderDetailPage() {
     );
   }
 
-  const canEdit =
-    order.status !== "cancelled" &&
-    order.status !== "completed" &&
-    order.payment_status !== "paid";
-  const canCancel =
-    order.status !== "cancelled" && order.status !== "completed";
-  const canMarkPaid = order.payment_status === "pending";
-  const canComplete =
-    order.payment_status === "paid" && order.status === "paid";
-
   return (
     <div className="space-y-4 lg:space-y-6">
-      {/* Header - Responsive */}
+      {/* Header */}
       <div className="flex items-center gap-3 sm:gap-4">
         <Link href="/orders">
-          <Button
-            variant="ghost"
-            size="sm"
-            className="h-8 w-8 p-0 sm:h-9 sm:w-auto sm:px-3"
-          >
+          <Button variant="ghost" size="sm" className="h-8 w-8 p-0 sm:h-9 sm:w-auto sm:px-3">
             <ArrowLeft size={18} />
           </Button>
         </Link>
@@ -379,21 +86,16 @@ export default function OrderDetailPage() {
         </div>
       </div>
 
-      {/* Status Cards - Responsive */}
+      {/* Status cards */}
       <div className="grid grid-cols-2 gap-3 sm:gap-4">
         <Card className="border-momcha-peach">
           <CardContent className="pt-4 sm:pt-6">
             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
               <div>
-                <p className="text-xs text-momcha-text-light mb-1">
-                  Status Pembayaran
-                </p>
+                <p className="text-xs text-momcha-text-light mb-1">Status Pembayaran</p>
                 <PaymentStatusBadge status={order.payment_status} bordered />
               </div>
-              <CreditCard
-                className="text-momcha-coral hidden sm:block"
-                size={20}
-              />
+              <CreditCard className="text-momcha-coral hidden sm:block" size={20} />
             </div>
           </CardContent>
         </Card>
@@ -402,25 +104,20 @@ export default function OrderDetailPage() {
           <CardContent className="pt-4 sm:pt-6">
             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
               <div>
-                <p className="text-xs text-momcha-text-light mb-1">
-                  Status Order
-                </p>
+                <p className="text-xs text-momcha-text-light mb-1">Status Order</p>
                 <OrderStatusBadge status={order.status} bordered />
               </div>
-              <FileText
-                className="text-momcha-pink hidden sm:block"
-                size={20}
-              />
+              <FileText className="text-momcha-pink hidden sm:block" size={20} />
             </div>
           </CardContent>
         </Card>
       </div>
 
-      {/* Main Content - Stack on Mobile, Grid on Desktop */}
+      {/* Main content */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 lg:gap-6">
-        {/* Left Column - Details */}
+        {/* Left column */}
         <div className="lg:col-span-2 space-y-4 lg:space-y-6">
-          {/* Customer Info */}
+          {/* Customer info */}
           <Card className="border-momcha-peach">
             <CardHeader className="pb-3">
               <CardTitle className="text-base lg:text-lg text-momcha-text-dark flex items-center gap-2">
@@ -429,65 +126,20 @@ export default function OrderDetailPage() {
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-2 sm:space-y-3">
-              <div className="flex items-start gap-2 sm:gap-3">
-                <User
-                  size={16}
-                  className="text-momcha-text-light mt-0.5 shrink-0"
-                />
-                <div className="flex-1 min-w-0">
-                  <p className="text-xs text-momcha-text-light">Nama</p>
-                  <p className="text-xs sm:text-sm font-medium text-momcha-text-dark">
-                    {order.customer_name}
-                  </p>
-                </div>
-              </div>
-
-              <div className="flex items-start gap-2 sm:gap-3">
-                <Phone
-                  size={16}
-                  className="text-momcha-text-light mt-0.5 shrink-0"
-                />
-                <div className="flex-1 min-w-0">
-                  <p className="text-xs text-momcha-text-light">Nomor HP</p>
-                  <p className="text-xs sm:text-sm font-medium text-momcha-text-dark">
-                    {order.customer_phone}
-                  </p>
-                </div>
-              </div>
-
+              <InfoRow icon={User} label="Nama">{order.customer_name}</InfoRow>
+              <InfoRow icon={Phone} label="Nomor HP">{order.customer_phone}</InfoRow>
               {order.customer_email && (
-                <div className="flex items-start gap-2 sm:gap-3">
-                  <Mail
-                    size={16}
-                    className="text-momcha-text-light mt-0.5 shrink-0"
-                  />
-                  <div className="flex-1 min-w-0">
-                    <p className="text-xs text-momcha-text-light">Email</p>
-                    <p className="text-xs sm:text-sm font-medium text-momcha-text-dark truncate">
-                      {order.customer_email}
-                    </p>
-                  </div>
-                </div>
+                <InfoRow icon={Mail} label="Email">
+                  <span className="truncate block">{order.customer_email}</span>
+                </InfoRow>
               )}
-
               {order.customer_address && (
-                <div className="flex items-start gap-2 sm:gap-3">
-                  <MapPin
-                    size={16}
-                    className="text-momcha-text-light mt-0.5 shrink-0"
-                  />
-                  <div className="flex-1 min-w-0">
-                    <p className="text-xs text-momcha-text-light">Alamat</p>
-                    <p className="text-xs sm:text-sm font-medium text-momcha-text-dark">
-                      {order.customer_address}
-                    </p>
-                  </div>
-                </div>
+                <InfoRow icon={MapPin} label="Alamat">{order.customer_address}</InfoRow>
               )}
             </CardContent>
           </Card>
 
-          {/* Service Info */}
+          {/* Service info */}
           <Card className="border-momcha-peach">
             <CardHeader className="pb-3">
               <CardTitle className="text-base lg:text-lg text-momcha-text-dark flex items-center gap-2">
@@ -496,7 +148,7 @@ export default function OrderDetailPage() {
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-3">
-              {order.services && order.services.length > 0 ? (
+              {order.services?.length > 0 ? (
                 <div className="space-y-2 sm:space-y-3">
                   {order.services.map((svc, index) => (
                     <div
@@ -504,18 +156,14 @@ export default function OrderDetailPage() {
                       className="flex items-start gap-2 sm:gap-3 p-2 sm:p-3 bg-momcha-cream rounded-lg"
                     >
                       <div className="w-6 h-6 sm:w-8 sm:h-8 rounded-full bg-momcha-peach flex items-center justify-center shrink-0">
-                        <span className="text-xs font-bold text-momcha-brown">
-                          {index + 1}
-                        </span>
+                        <span className="text-xs font-bold text-momcha-brown">{index + 1}</span>
                       </div>
                       <div className="flex-1 min-w-0">
                         <p className="text-xs sm:text-sm font-semibold text-momcha-text-dark">
                           {svc.service_name}
                         </p>
                         <div className="flex flex-wrap items-center gap-2 mt-0.5 sm:mt-1 text-xs text-momcha-text-light">
-                          <span>
-                            {formatCurrency(svc.price)} x {svc.quantity}
-                          </span>
+                          <span>{formatCurrency(svc.price)} x {svc.quantity}</span>
                           <span>•</span>
                           <span>{svc.duration_minutes}m per sesi</span>
                         </div>
@@ -528,21 +176,17 @@ export default function OrderDetailPage() {
                     </div>
                   ))}
 
-                  {/* Total Summary */}
+                  {/* Totals */}
                   <div className="pt-2 sm:pt-3 border-t border-momcha-peach">
                     <div className="flex items-center justify-between">
                       <div>
-                        <p className="text-xs text-momcha-text-light">
-                          Total Durasi
-                        </p>
+                        <p className="text-xs text-momcha-text-light">Total Durasi</p>
                         <p className="text-xs sm:text-sm font-bold text-momcha-text-dark">
                           {order.total_duration_minutes} menit
                         </p>
                       </div>
                       <div className="text-right">
-                        <p className="text-xs text-momcha-text-light">
-                          Total Harga
-                        </p>
+                        <p className="text-xs text-momcha-text-light">Total Harga</p>
                         <p className="text-base sm:text-lg font-bold text-momcha-coral">
                           {formatCurrency(order.total_amount)}
                         </p>
@@ -556,57 +200,23 @@ export default function OrderDetailPage() {
                 </p>
               )}
 
-              {/* Schedule Info */}
+              {/* Schedule */}
               <div className="pt-2 sm:pt-3 border-t border-momcha-peach space-y-2">
-                <div className="flex items-start gap-2 sm:gap-3">
-                  <Calendar
-                    size={16}
-                    className="text-momcha-text-light mt-0.5 shrink-0"
-                  />
-                  <div>
-                    <p className="text-xs text-momcha-text-light">Tanggal</p>
-                    <p className="text-xs sm:text-sm font-medium text-momcha-text-dark">
-                      {formatDate(order.service_date)}
-                    </p>
-                  </div>
-                </div>
-
-                <div className="flex items-start gap-2 sm:gap-3">
-                  <Clock
-                    size={16}
-                    className="text-momcha-text-light mt-0.5 shrink-0"
-                  />
-                  <div>
-                    <p className="text-xs text-momcha-text-light">Waktu</p>
-                    <p className="text-xs sm:text-sm font-medium text-momcha-text-dark">
-                      {formatTime(order.service_start_time)} (
-                      {order.total_duration_minutes} menit total)
-                    </p>
-                  </div>
-                </div>
-
+                <InfoRow icon={Calendar} label="Tanggal">{formatDate(order.service_date)}</InfoRow>
+                <InfoRow icon={Clock} label="Waktu">
+                  {formatTime(order.service_start_time)} ({order.total_duration_minutes} menit total)
+                </InfoRow>
                 {order.notes && (
-                  <div className="flex items-start gap-2 sm:gap-3">
-                    <FileText
-                      size={16}
-                      className="text-momcha-text-light mt-0.5 shrink-0"
-                    />
-                    <div>
-                      <p className="text-xs text-momcha-text-light">Catatan</p>
-                      <p className="text-xs sm:text-sm font-medium text-momcha-text-dark">
-                        {order.notes}
-                      </p>
-                    </div>
-                  </div>
+                  <InfoRow icon={FileText} label="Catatan">{order.notes}</InfoRow>
                 )}
               </div>
             </CardContent>
           </Card>
         </div>
 
-        {/* Right Column - Actions */}
+        {/* Right column */}
         <div className="space-y-4 lg:space-y-6">
-          {/* Payment Info */}
+          {/* Payment info */}
           <Card className="border-momcha-peach">
             <CardHeader className="pb-3">
               <CardTitle className="text-base lg:text-lg text-momcha-text-dark flex items-center gap-2">
@@ -616,9 +226,7 @@ export default function OrderDetailPage() {
             </CardHeader>
             <CardContent className="space-y-3 sm:space-y-4">
               <div>
-                <p className="text-xs text-momcha-text-light mb-1">
-                  Total Harga
-                </p>
+                <p className="text-xs text-momcha-text-light mb-1">Total Harga</p>
                 <p className="text-xl sm:text-2xl font-bold text-momcha-text-dark">
                   {formatCurrency(order.total_amount)}
                 </p>
@@ -632,15 +240,9 @@ export default function OrderDetailPage() {
                     className="w-full bg-momcha-coral hover:bg-momcha-brown text-white text-sm h-9"
                   >
                     {copied ? (
-                      <>
-                        <Check size={14} className="mr-2" />
-                        Tersalin!
-                      </>
+                      <><Check size={14} className="mr-2" />Tersalin!</>
                     ) : (
-                      <>
-                        <Copy size={14} className="mr-2" />
-                        Copy Payment Link
-                      </>
+                      <><Copy size={14} className="mr-2" />Copy Payment Link</>
                     )}
                   </Button>
                 </div>
@@ -666,24 +268,21 @@ export default function OrderDetailPage() {
                 </div>
               )}
 
-              {order.status === "cancelled" &&
-                order.notes?.includes("[Refund Manual]") && (
-                  <div className="p-2 sm:p-3 bg-blue-50 rounded-lg space-y-1">
-                    <p className="text-xs font-medium text-blue-800">
-                      Keterangan Refund
-                    </p>
-                    <p className="text-xs text-blue-700">
-                      {order.notes
-                        .split("\n")
-                        .find((l) => l.startsWith("[Refund Manual]"))
-                        ?.replace("[Refund Manual] ", "")}
-                    </p>
-                  </div>
-                )}
+              {order.status === "cancelled" && order.notes?.includes("[Refund Manual]") && (
+                <div className="p-2 sm:p-3 bg-blue-50 rounded-lg space-y-1">
+                  <p className="text-xs font-medium text-blue-800">Keterangan Refund</p>
+                  <p className="text-xs text-blue-700">
+                    {order.notes
+                      .split("\n")
+                      .find((l) => l.startsWith("[Refund Manual]"))
+                      ?.replace("[Refund Manual] ", "")}
+                  </p>
+                </div>
+              )}
             </CardContent>
           </Card>
 
-          {/* Quick Actions */}
+          {/* Actions */}
           <Card className="border-momcha-peach">
             <CardHeader className="pb-3">
               <CardTitle className="text-base lg:text-lg text-momcha-text-dark">
@@ -734,440 +333,47 @@ export default function OrderDetailPage() {
         </div>
       </div>
 
-      {/* Edit Order Modal - Responsive */}
-      <Dialog open={showEditModal} onOpenChange={setShowEditModal}>
-        <DialogContent className="max-w-2xl w-[calc(100%-2rem)] sm:w-full max-h-[90vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle className="text-base sm:text-lg">
-              Edit Order
-            </DialogTitle>
-            <DialogDescription className="text-xs sm:text-sm">
-              Ubah layanan, tanggal, atau waktu
-            </DialogDescription>
-          </DialogHeader>
+      {/* Modals */}
+      <EditOrderModal
+        open={showEditModal}
+        onClose={() => setShowEditModal(false)}
+        onSave={handleEditOrder}
+        editForm={editForm}
+        onEditFormChange={setEditForm}
+        services={services}
+        loadingServices={loadingServices}
+        loading={actionLoading}
+      />
 
-          <div className="space-y-3 sm:space-y-4 py-2 sm:py-4">
-            {/* Services */}
-            <div className="space-y-2 sm:space-y-3">
-              <div className="flex items-center justify-between">
-                <label className="text-xs sm:text-sm font-medium">
-                  Layanan
-                </label>
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  onClick={() => {
-                    setEditForm({
-                      ...editForm,
-                      services: [
-                        ...editForm.services,
-                        {
-                          service_id: "",
-                          quantity: 1,
-                          use_custom_price: false,
-                          custom_price: "",
-                        },
-                      ],
-                    });
-                  }}
-                  className="h-8 text-xs"
-                >
-                  <Plus size={12} className="mr-1" />
-                  Tambah
-                </Button>
-              </div>
+      <MarkPaidModal
+        open={showMarkPaidModal}
+        onClose={() => setShowMarkPaidModal(false)}
+        onConfirm={markAsPaid}
+        order={order}
+        loading={actionLoading}
+      />
 
-              {loadingServices ? (
-                <div className="flex items-center justify-center py-4">
-                  <Loader2
-                    size={20}
-                    className="animate-spin text-momcha-coral"
-                  />
-                </div>
-              ) : (
-                <div className="space-y-2 sm:space-y-3">
-                  {editForm.services?.map((item, index) => (
-                    <div
-                      key={index}
-                      className="space-y-2 pb-2 sm:pb-3 border-b border-momcha-peach last:border-0"
-                    >
-                      <div className="flex gap-2 items-start">
-                        <select
-                          className="flex-1 px-2 sm:px-3 py-1.5 sm:py-2 border rounded-lg text-xs sm:text-sm"
-                          value={item.service_id}
-                          onChange={(e) => {
-                            const newServices = [...editForm.services];
-                            newServices[index].service_id = e.target.value;
-                            setEditForm({ ...editForm, services: newServices });
-                          }}
-                          required
-                        >
-                          <option value="">-- Pilih Layanan --</option>
-                          {services.map((service) => (
-                            <option key={service.id} value={service.id}>
-                              {service.name} - {formatCurrency(service.price)}
-                            </option>
-                          ))}
-                        </select>
+      <CompleteOrderModal
+        open={showCompleteModal}
+        onClose={() => setShowCompleteModal(false)}
+        onConfirm={markAsCompleted}
+        order={order}
+        loading={actionLoading}
+        confirmed={completeConfirmed}
+        onConfirmedChange={setCompleteConfirmed}
+      />
 
-                        <Input
-                          type="number"
-                          min="1"
-                          placeholder="Qty"
-                          value={item.quantity}
-                          onChange={(e) => {
-                            const newServices = [...editForm.services];
-                            newServices[index].quantity = e.target.value;
-                            setEditForm({ ...editForm, services: newServices });
-                          }}
-                          className="w-16 h-8 sm:h-10 text-xs sm:text-sm"
-                          required
-                        />
-
-                        <Button
-                          type="button"
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => {
-                            if (editForm.services.length === 1) {
-                              toast.error("Minimal 1 layanan");
-                              return;
-                            }
-                            const newServices = editForm.services.filter(
-                              (_, i) => i !== index,
-                            );
-                            setEditForm({ ...editForm, services: newServices });
-                          }}
-                          className="text-red-600 h-8 w-8 p-0"
-                        >
-                          <Trash2 size={14} />
-                        </Button>
-                      </div>
-
-                      {item.service_id && (
-                        <div className="flex flex-col sm:flex-row items-start sm:items-center gap-2 sm:gap-3">
-                          <label className="flex items-center gap-2 text-xs sm:text-sm cursor-pointer">
-                            <input
-                              type="checkbox"
-                              checked={item.use_custom_price || false}
-                              onChange={(e) => {
-                                const newServices = [...editForm.services];
-                                newServices[index].use_custom_price =
-                                  e.target.checked;
-                                if (!e.target.checked) {
-                                  newServices[index].custom_price = "";
-                                }
-                                setEditForm({
-                                  ...editForm,
-                                  services: newServices,
-                                });
-                              }}
-                              className="rounded"
-                            />
-                            <span className="text-momcha-text-light">
-                              Custom harga
-                            </span>
-                          </label>
-
-                          {item.use_custom_price && (
-                            <Input
-                              type="number"
-                              min="0"
-                              placeholder="Harga custom"
-                              value={item.custom_price || ""}
-                              onChange={(e) => {
-                                const newServices = [...editForm.services];
-                                newServices[index].custom_price =
-                                  e.target.value;
-                                setEditForm({
-                                  ...editForm,
-                                  services: newServices,
-                                });
-                              }}
-                              className="w-full sm:w-32 h-8 sm:h-10 text-xs sm:text-sm"
-                            />
-                          )}
-                        </div>
-                      )}
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
-
-            {/* Date */}
-            <div className="space-y-1.5">
-              <label className="text-xs sm:text-sm font-medium">
-                Tanggal <span className="text-red-500">*</span>
-              </label>
-              <Input
-                type="date"
-                value={editForm.service_date}
-                onChange={(e) =>
-                  setEditForm({ ...editForm, service_date: e.target.value })
-                }
-                min={(() => { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`; })()}
-                className="h-9 sm:h-10 text-sm"
-              />
-            </div>
-
-            {/* Time */}
-            <div className="space-y-1.5">
-              <label className="text-xs sm:text-sm font-medium">
-                Waktu <span className="text-red-500">*</span>
-              </label>
-              <Input
-                type="time"
-                value={editForm.service_start_time}
-                onChange={(e) =>
-                  setEditForm({
-                    ...editForm,
-                    service_start_time: e.target.value,
-                  })
-                }
-                className="h-9 sm:h-10 text-sm"
-              />
-            </div>
-
-            {/* Notes */}
-            <div className="space-y-1.5">
-              <label className="text-xs sm:text-sm font-medium">Catatan</label>
-              <textarea
-                className="w-full px-2 sm:px-3 py-1.5 sm:py-2 border rounded-lg text-xs sm:text-sm resize-none focus:outline-none focus:ring-2 focus:ring-momcha-coral"
-                rows="2"
-                placeholder="Catatan tambahan (opsional)"
-                value={editForm.notes}
-                onChange={(e) =>
-                  setEditForm({ ...editForm, notes: e.target.value })
-                }
-              />
-            </div>
-          </div>
-
-          <DialogFooter className="gap-2 sm:gap-0">
-            <Button
-              variant="outline"
-              onClick={() => setShowEditModal(false)}
-              disabled={actionLoading}
-              className="text-sm h-9"
-            >
-              Batal
-            </Button>
-            <Button
-              onClick={handleEditOrder}
-              disabled={actionLoading}
-              className="bg-momcha-coral hover:bg-momcha-brown text-sm h-9"
-            >
-              {actionLoading ? (
-                <>
-                  <Loader2 size={14} className="mr-2 animate-spin" />
-                  Menyimpan...
-                </>
-              ) : (
-                "Simpan Perubahan"
-              )}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      {/* Mark as Paid Modal */}
-      <Dialog open={showMarkPaidModal} onOpenChange={setShowMarkPaidModal}>
-        <DialogContent className="max-w-md w-[calc(100%-2rem)] sm:w-full">
-          <DialogHeader>
-            <DialogTitle className="text-base sm:text-lg">
-              Konfirmasi Pembayaran
-            </DialogTitle>
-            <DialogDescription className="text-xs sm:text-sm">
-              Tandai order ini sebagai sudah dibayar?
-            </DialogDescription>
-          </DialogHeader>
-
-          <div className="py-2 sm:py-4">
-            <div className="flex items-center gap-3 p-3 sm:p-4 bg-green-50 rounded-lg">
-              <Check className="text-green-600 shrink-0" size={20} />
-              <div className="flex-1 min-w-0">
-                <p className="text-xs sm:text-sm font-medium text-green-900 truncate">
-                  {order?.order_number}
-                </p>
-                <p className="text-xs sm:text-sm text-green-700">
-                  {formatCurrency(order?.total_amount)}
-                </p>
-              </div>
-            </div>
-          </div>
-
-          <DialogFooter className="gap-2 sm:gap-0">
-            <Button
-              variant="outline"
-              onClick={() => setShowMarkPaidModal(false)}
-              disabled={actionLoading}
-              className="text-sm h-9"
-            >
-              Batal
-            </Button>
-            <Button
-              onClick={markAsPaid}
-              disabled={actionLoading}
-              className="bg-green-600 hover:bg-green-700 text-white text-sm h-9"
-            >
-              {actionLoading ? (
-                <>
-                  <Loader2 size={14} className="mr-2 animate-spin" />
-                  Memproses...
-                </>
-              ) : (
-                <>
-                  <Check size={14} className="mr-2" />
-                  Ya, Tandai Sudah Bayar
-                </>
-              )}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      {/* Mark as Completed Modal */}
-      <Dialog open={showCompleteModal} onOpenChange={setShowCompleteModal}>
-        <DialogContent className="max-w-md w-[calc(100%-2rem)] sm:w-full">
-          <DialogHeader>
-            <DialogTitle className="text-base sm:text-lg">
-              Tandai Selesai
-            </DialogTitle>
-            <DialogDescription className="text-xs sm:text-sm">
-              Order ini akan ditandai sebagai selesai
-            </DialogDescription>
-          </DialogHeader>
-
-          <div className="space-y-3 py-2 sm:py-4">
-            <div className="flex items-center gap-3 p-3 sm:p-4 bg-blue-50 rounded-lg">
-              <Check className="text-blue-600 shrink-0" size={20} />
-              <div className="flex-1 min-w-0">
-                <p className="text-xs sm:text-sm font-medium text-blue-900 truncate">
-                  {order?.order_number}
-                </p>
-                <p className="text-xs text-blue-700">
-                  {order.services?.length} layanan
-                </p>
-                <p className="text-xs text-blue-700">
-                  {formatDate(order?.service_date)} ·{" "}
-                  {formatTime(order?.service_start_time)}
-                </p>
-              </div>
-            </div>
-
-            <label className="flex items-start gap-2 cursor-pointer">
-              <input
-                type="checkbox"
-                checked={completeConfirmed}
-                onChange={(e) => setCompleteConfirmed(e.target.checked)}
-                className="mt-0.5 rounded"
-              />
-              <span className="text-xs sm:text-sm text-momcha-text-dark">
-                Saya konfirmasi bahwa semua layanan sudah selesai dikerjakan
-              </span>
-            </label>
-          </div>
-
-          <DialogFooter className="gap-2 sm:gap-0">
-            <Button
-              variant="outline"
-              onClick={() => { setShowCompleteModal(false); setCompleteConfirmed(false); }}
-              disabled={actionLoading}
-              className="text-sm h-9"
-            >
-              Batal
-            </Button>
-            <Button
-              onClick={markAsCompleted}
-              disabled={!completeConfirmed || actionLoading}
-              className="bg-momcha-coral hover:bg-momcha-brown text-sm h-9"
-            >
-              {actionLoading ? (
-                <>
-                  <Loader2 size={14} className="mr-2 animate-spin" />
-                  Memproses...
-                </>
-              ) : (
-                <>
-                  <Check size={14} className="mr-2" />
-                  Ya, Tandai Selesai
-                </>
-              )}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      {/* Cancel Modal */}
-      <Dialog open={showCancelModal} onOpenChange={setShowCancelModal}>
-        <DialogContent className="max-w-md w-[calc(100%-2rem)] sm:w-full">
-          <DialogHeader>
-            <DialogTitle className="text-base sm:text-lg">
-              Cancel Order
-            </DialogTitle>
-            <DialogDescription className="text-xs sm:text-sm">
-              Order yang dibatalkan tidak dapat dikembalikan
-            </DialogDescription>
-          </DialogHeader>
-
-          <div className="space-y-3 sm:space-y-4 py-2 sm:py-4">
-            <div className="space-y-1.5">
-              <label className="text-xs sm:text-sm font-medium">
-                Alasan Pembatalan <span className="text-red-500">*</span>
-              </label>
-              <textarea
-                className="w-full px-2 sm:px-3 py-1.5 sm:py-2 border rounded-lg text-xs sm:text-sm resize-none focus:outline-none focus:ring-2 focus:ring-momcha-coral"
-                rows="3"
-                placeholder="Contoh: Customer request cancel, double booking, dll"
-                value={cancelReason}
-                onChange={(e) => setCancelReason(e.target.value)}
-              />
-            </div>
-
-            {order.payment_status === "paid" && (
-              <div className="space-y-1.5">
-                <label className="text-xs sm:text-sm font-medium">
-                  Keterangan Refund <span className="text-red-500">*</span>
-                </label>
-                <textarea
-                  className="w-full px-2 sm:px-3 py-1.5 sm:py-2 border rounded-lg text-xs sm:text-sm resize-none focus:outline-none focus:ring-2 focus:ring-momcha-coral"
-                  rows="2"
-                  placeholder="Contoh: Sudah transfer balik Rp 150.000 ke rekening BCA customer"
-                  value={refundNotes}
-                  onChange={(e) => setRefundNotes(e.target.value)}
-                />
-              </div>
-            )}
-          </div>
-
-          <DialogFooter className="gap-2 sm:gap-0">
-            <Button
-              variant="outline"
-              onClick={() => setShowCancelModal(false)}
-              disabled={actionLoading}
-              className="text-sm h-9"
-            >
-              Batal
-            </Button>
-            <Button
-              onClick={handleCancel}
-              disabled={actionLoading}
-              className="bg-red-600 hover:bg-red-700 text-white text-sm h-9"
-            >
-              {actionLoading ? (
-                <>
-                  <Loader2 size={14} className="mr-2 animate-spin" />
-                  Memproses...
-                </>
-              ) : (
-                "Cancel Order"
-              )}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      <CancelOrderModal
+        open={showCancelModal}
+        onClose={() => setShowCancelModal(false)}
+        onConfirm={handleCancel}
+        order={order}
+        loading={actionLoading}
+        reason={cancelReason}
+        onReasonChange={setCancelReason}
+        refundNotes={refundNotes}
+        onRefundNotesChange={setRefundNotes}
+      />
     </div>
   );
 }
