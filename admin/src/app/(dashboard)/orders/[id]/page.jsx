@@ -7,6 +7,7 @@ import { formatCurrency, formatDate, formatTime } from "@/constants";
 import { OrderStatusBadge, PaymentStatusBadge } from "@/components/StatusBadge";
 import { InfoRow } from "@/components/ui/InfoRow";
 import { EditOrderModal } from "@/components/orders/EditOrderModal";
+import { RescheduleModal } from "@/components/orders/RescheduleModal";
 import { CancelOrderModal } from "@/components/orders/CancelOrderModal";
 import { MarkPaidModal } from "@/components/orders/MarkPaidModal";
 import { CompleteOrderModal } from "@/components/orders/CompleteOrderModal";
@@ -41,6 +42,7 @@ export default function OrderDetailPage() {
     services, loadingServices,
     copied, actionLoading,
     showEditModal, setShowEditModal,
+    showRescheduleModal, setShowRescheduleModal,
     showCancelModal, setShowCancelModal,
     showMarkPaidModal, setShowMarkPaidModal,
     showCompleteModal, setShowCompleteModal,
@@ -48,13 +50,16 @@ export default function OrderDetailPage() {
     cancelReason, setCancelReason,
     refundNotes, setRefundNotes,
     editForm, setEditForm,
+    rescheduleForm, setRescheduleForm,
     copyPaymentLink,
     markAsPaid,
     markAsCompleted,
     openEditModal,
+    openRescheduleModal,
     handleEditOrder,
+    handleReschedule,
     handleCancel,
-    canEdit, canCancel, canMarkPaid, canComplete,
+    canEdit, canReschedule, canCancel, canMarkPaid, canComplete,
   } = useOrderDetail(orderId);
 
   if (loading) return <OrderDetailSkeleton />;
@@ -302,11 +307,11 @@ export default function OrderDetailPage() {
               <Button
                 variant="outline"
                 className="w-full justify-start text-sm h-9"
-                onClick={openEditModal}
-                disabled={!canEdit || actionLoading}
+                onClick={canEdit ? openEditModal : openRescheduleModal}
+                disabled={(!canEdit && !canReschedule) || actionLoading}
               >
                 <Edit size={14} className="mr-2" />
-                Edit Order
+                {canReschedule ? "Ubah Jadwal" : "Edit Order"}
               </Button>
 
               <Button
@@ -334,6 +339,15 @@ export default function OrderDetailPage() {
       </div>
 
       {/* Modals */}
+      <RescheduleModal
+        open={showRescheduleModal}
+        onClose={() => setShowRescheduleModal(false)}
+        onSave={handleReschedule}
+        form={rescheduleForm}
+        onFormChange={setRescheduleForm}
+        loading={actionLoading}
+      />
+
       <EditOrderModal
         open={showEditModal}
         onClose={() => setShowEditModal(false)}

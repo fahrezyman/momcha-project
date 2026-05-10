@@ -27,6 +27,7 @@ export function useOrderDetail(orderId) {
 
   // ── Modal visibility ──────────────────────────────────────────────────────
   const [showEditModal, setShowEditModal] = useState(false);
+  const [showRescheduleModal, setShowRescheduleModal] = useState(false);
   const [showCancelModal, setShowCancelModal] = useState(false);
   const [showMarkPaidModal, setShowMarkPaidModal] = useState(false);
   const [showCompleteModal, setShowCompleteModal] = useState(false);
@@ -40,6 +41,10 @@ export function useOrderDetail(orderId) {
     service_date: "",
     service_start_time: "",
     notes: "",
+  });
+  const [rescheduleForm, setRescheduleForm] = useState({
+    service_date: "",
+    service_start_time: "",
   });
 
   useEffect(() => {
@@ -123,6 +128,56 @@ export function useOrderDetail(orderId) {
         loadOrder();
       } else {
         toast.error(res.error?.message || "Gagal update status");
+      }
+    } catch {
+      toast.error("Terjadi kesalahan");
+    } finally {
+      setActionLoading(false);
+    }
+  }
+
+  /** Buka reschedule modal (order sudah lunas) dan isi form dengan jadwal saat ini. */
+  function openRescheduleModal() {
+    setRescheduleForm({
+      service_date: order.service_date,
+      service_start_time: order.service_start_time,
+    });
+    setShowRescheduleModal(true);
+  }
+
+  /** Simpan perubahan jadwal saja (khusus order yang sudah lunas). */
+  async function handleReschedule() {
+    if (!rescheduleForm.service_date || !rescheduleForm.service_start_time) {
+      toast.error("Tanggal dan waktu wajib diisi");
+      return;
+    }
+
+    const unchanged =
+      rescheduleForm.service_date === order.service_date &&
+      rescheduleForm.service_start_time === order.service_start_time;
+
+    if (unchanged) {
+      toast.info("Tidak ada perubahan jadwal");
+      setShowRescheduleModal(false);
+      return;
+    }
+
+    try {
+      setActionLoading(true);
+      const res = await api.rescheduleOrder(orderId, {
+        new_date: rescheduleForm.service_date,
+        new_time: rescheduleForm.service_start_time,
+        reason: "Perubahan jadwal",
+      });
+
+      if (res.success) {
+        toast.success("Jadwal berhasil diubah!");
+        setShowRescheduleModal(false);
+        loadOrder();
+      } else if (res.error?.code === "SCHEDULE_CONFLICT") {
+        toast.error(`Waktu bentrok dengan order lain: ${res.error.conflict_order?.order_number}`);
+      } else {
+        toast.error(res.error?.message || "Gagal mengubah jadwal");
       }
     } catch {
       toast.error("Terjadi kesalahan");
@@ -270,6 +325,10 @@ export function useOrderDetail(orderId) {
   const canEdit = order
     ? order.status !== "cancelled" && order.status !== "completed" && order.payment_status !== "paid"
     : false;
+  // Reschedule hanya boleh saat sudah lunas, belum selesai/batal
+  const canReschedule = order
+    ? order.payment_status === "paid" && order.status !== "cancelled" && order.status !== "completed"
+    : false;
   const canCancel = order
     ? order.status !== "cancelled" && order.status !== "completed"
     : false;
@@ -287,6 +346,7 @@ export function useOrderDetail(orderId) {
     actionLoading,
     // modals
     showEditModal, setShowEditModal,
+    showRescheduleModal, setShowRescheduleModal,
     showCancelModal, setShowCancelModal,
     showMarkPaidModal, setShowMarkPaidModal,
     showCompleteModal, setShowCompleteModal,
@@ -295,15 +355,19 @@ export function useOrderDetail(orderId) {
     cancelReason, setCancelReason,
     refundNotes, setRefundNotes,
     editForm, setEditForm,
+    rescheduleForm, setRescheduleForm,
     // actions
     copyPaymentLink,
     markAsPaid,
     markAsCompleted,
     openEditModal,
+    openRescheduleModal,
     handleEditOrder,
+    handleReschedule,
     handleCancel,
     // permissions
     canEdit,
+    canReschedule,
     canCancel,
     canMarkPaid,
     canComplete,
