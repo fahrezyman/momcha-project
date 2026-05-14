@@ -528,9 +528,14 @@ async function updateOrder(req, res) {
         );
       }
 
-      // Update order totals
+      // Update order totals.
+      // Kalau QRIS sudah di-generate, reset payment_link supaya nanti dibuat ulang
+      // dengan jumlah yang benar — mencegah mismatch antara total DB dan Midtrans.
+      const shouldResetQris = order.payment_method === "qris" && order.payment_link;
       await db.query(
-        "UPDATE orders SET total_amount = ?, total_duration_minutes = ? WHERE id = ?",
+        `UPDATE orders SET total_amount = ?, total_duration_minutes = ?
+         ${shouldResetQris ? ", payment_method = NULL, payment_link = NULL, thirdparty_transaction_id = NULL" : ""}
+         WHERE id = ?`,
         [total_amount, total_duration, id],
       );
     }

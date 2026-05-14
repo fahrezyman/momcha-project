@@ -69,8 +69,8 @@ async function handlePaymentNotification(req, res) {
       payment_status = "cancelled";
       order_status = "cancelled";
     } else if (transaction_status === "expire") {
-      payment_status = "expired";
-      order_status = "cancelled";
+      payment_status = "pending";
+      order_status = "pending_payment";
     } else if (transaction_status === "refund") {
       payment_status = "refunded";
       order_status = "refunded";
@@ -86,12 +86,14 @@ async function handlePaymentNotification(req, res) {
     }
 
     // Update order
+    const isExpired = transaction_status === "expire";
     const updateQuery = `
-      UPDATE orders 
+      UPDATE orders
       SET payment_status = ?,
           status = ?,
           thirdparty_transaction_id = ?,
           paid_at = ${payment_status === "paid" ? "NOW()" : "paid_at"}
+          ${isExpired ? ", payment_method = NULL, payment_link = NULL" : ""}
       WHERE id = ?
     `;
 
