@@ -47,30 +47,37 @@ async function handlePaymentNotification(req, res) {
 
     const order = orders[0];
 
+    // Expire ditangani lebih awal — bypass guard karena order masih 'pending'
+    // saat expire tiba, sehingga guard akan skip jika diletakkan setelah mapping.
+    if (transaction_status === "expire") {
+      if (order.payment_status !== "paid") {
+        await db.query(
+          `UPDATE orders SET payment_status = 'pending', status = 'pending_payment',
+           payment_method = NULL, payment_link = NULL, thirdparty_transaction_id = NULL
+           WHERE id = ?`,
+          [order.id],
+        );
+        console.log(`🔄 QRIS expired, order ${order_id} reset to pending_payment`);
+      }
+      return res.json({ success: true, message: "Notification processed" });
+    }
+
     // Update order based on transaction status
     let payment_status;
     let order_status;
 
     if (transaction_status === "capture" && fraud_status === "accept") {
-      // Card payment capture (fraud check required)
       payment_status = "paid";
       order_status = "paid";
     } else if (transaction_status === "settlement") {
-      // QRIS / transfer settlement (no fraud_status for non-card)
       payment_status = "paid";
       order_status = "paid";
     } else if (transaction_status === "pending") {
       payment_status = "pending";
       order_status = "pending_payment";
-    } else if (
-      transaction_status === "deny" ||
-      transaction_status === "cancel"
-    ) {
+    } else if (transaction_status === "deny" || transaction_status === "cancel") {
       payment_status = "cancelled";
       order_status = "cancelled";
-    } else if (transaction_status === "expire") {
-      payment_status = "pending";
-      order_status = "pending_payment";
     } else if (transaction_status === "refund") {
       payment_status = "refunded";
       order_status = "refunded";
@@ -86,14 +93,12 @@ async function handlePaymentNotification(req, res) {
     }
 
     // Update order
-    const isExpired = transaction_status === "expire";
     const updateQuery = `
       UPDATE orders
       SET payment_status = ?,
           status = ?,
           thirdparty_transaction_id = ?,
           paid_at = ${payment_status === "paid" ? "NOW()" : "paid_at"}
-          ${isExpired ? ", payment_method = NULL, payment_link = NULL" : ""}
       WHERE id = ?
     `;
 
