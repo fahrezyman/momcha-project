@@ -161,6 +161,18 @@ class API {
   }
 
   /**
+   * Proses pembayaran setelah service selesai.
+   * @param {string|number} id
+   * @param {'cash'|'qris'} paymentMethod
+   */
+  async processPayment(id, paymentMethod) {
+    return this.fetch(`/orders/${id}/payment`, {
+      method: "POST",
+      body: JSON.stringify({ payment_method: paymentMethod }),
+    });
+  }
+
+  /**
    * Batalkan order.
    * @param {string|number} id
    * @param {string} reason        - Alasan pembatalan (wajib)

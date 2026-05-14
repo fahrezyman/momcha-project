@@ -28,7 +28,7 @@ export function OrderSuccessModal({ open, onClose, onViewDetail, order }) {
             Order Berhasil Dibuat!
           </DialogTitle>
           <DialogDescription>
-            Order telah dibuat dan payment link sudah disalin
+            Order telah dibuat. Proses pembayaran dilakukan setelah service selesai.
           </DialogDescription>
         </DialogHeader>
 
@@ -44,14 +44,6 @@ export function OrderSuccessModal({ open, onClose, onViewDetail, order }) {
                 {formatCurrency(order.total_amount)}
               </p>
             </div>
-            {order.payment_link && (
-              <div className="space-y-2">
-                <p className="text-xs text-momcha-text-light">Payment Link (sudah disalin)</p>
-                <div className="p-3 bg-gray-100 rounded text-xs break-all">
-                  {order.payment_link}
-                </div>
-              </div>
-            )}
           </div>
         )}
 

@@ -9,7 +9,8 @@ const {
   rescheduleOrder,
   updateOrderStatus,
   cancelOrder,
-} = require("../controllers/orderController"); // ← TAMBAH 's'
+  processPayment,
+} = require("../controllers/orderController");
 const { authenticate } = require("../middleware/auth");
 
 // Public route (for payment page)
@@ -21,6 +22,7 @@ router.get("/:id", authenticate, getOrderById);
 router.post("/", authenticate, createOrder);
 
 // PENTING: Routes spesifik HARUS SEBELUM routes general!
+router.post("/:id/payment", authenticate, processPayment);
 router.post("/:id/reschedule", authenticate, rescheduleOrder);
 router.post("/:id/cancel", authenticate, cancelOrder);
 router.patch("/:id/status", authenticate, updateOrderStatus);

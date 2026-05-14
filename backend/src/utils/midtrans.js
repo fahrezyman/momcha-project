@@ -7,6 +7,7 @@ const snap = new midtransClient.Snap({
   clientKey: process.env.MIDTRANS_CLIENT_KEY,
 });
 
+
 /**
  * Create Midtrans transaction
  * @param {Object} orderData - Order data

@@ -190,10 +190,6 @@ export function useCreateOrder() {
       const res = await api.createOrder(payload);
       if (res.success) {
         setCreatedOrder(res.data);
-        if (res.data.payment_link) {
-          navigator.clipboard.writeText(res.data.payment_link);
-          toast.success("Payment link disalin ke clipboard!");
-        }
         toast.success("Order berhasil dibuat!");
         setShowSuccessModal(true);
       } else {

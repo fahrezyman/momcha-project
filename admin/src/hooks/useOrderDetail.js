@@ -3,15 +3,6 @@ import { useRouter } from "next/navigation";
 import { api } from "@/lib/api";
 import { toast } from "sonner";
 
-/**
- * useOrderDetail — semua state dan logic untuk halaman detail order.
- *
- * Memisahkan business logic dari presentasi sehingga orders/[id]/page.jsx
- * hanya bertanggung jawab merender UI.
- *
- * @param {string|number} orderId - ID order dari URL params
- * @returns {object} State dan fungsi siap pakai
- */
 export function useOrderDetail(orderId) {
   const router = useRouter();
 
@@ -22,15 +13,17 @@ export function useOrderDetail(orderId) {
   const [loadingServices, setLoadingServices] = useState(false);
 
   // ── UI state ──────────────────────────────────────────────────────────────
-  const [copied, setCopied] = useState(false);
   const [actionLoading, setActionLoading] = useState(false);
 
   // ── Modal visibility ──────────────────────────────────────────────────────
   const [showEditModal, setShowEditModal] = useState(false);
   const [showRescheduleModal, setShowRescheduleModal] = useState(false);
   const [showCancelModal, setShowCancelModal] = useState(false);
-  const [showMarkPaidModal, setShowMarkPaidModal] = useState(false);
+  const [showPaymentModal, setShowPaymentModal] = useState(false);
   const [showCompleteModal, setShowCompleteModal] = useState(false);
+
+  // ── Payment state ─────────────────────────────────────────────────────────
+  const [paymentStep, setPaymentStep] = useState("choose"); // 'choose' | 'cash'
 
   // ── Form state ────────────────────────────────────────────────────────────
   const [completeConfirmed, setCompleteConfirmed] = useState(false);
@@ -86,37 +79,49 @@ export function useOrderDetail(orderId) {
     }
   }
 
-  // ── Actions ───────────────────────────────────────────────────────────────
+  // ── Payment ───────────────────────────────────────────────────────────────
 
-  /** Copy payment link ke clipboard dan tampilkan feedback singkat. */
-  function copyPaymentLink() {
-    if (!order?.payment_link) return;
-    navigator.clipboard.writeText(order.payment_link);
-    setCopied(true);
-    toast.success("Payment link berhasil disalin!");
-    setTimeout(() => setCopied(false), 2000);
+  function openPaymentModal() {
+    setPaymentStep("choose");
+    setShowPaymentModal(true);
   }
 
-  /** Tandai order sebagai sudah dibayar secara manual. */
-  async function markAsPaid() {
+  function closePaymentModal() {
+    setShowPaymentModal(false);
+    setPaymentStep("choose");
+  }
+
+  async function processPayment(method) {
     try {
       setActionLoading(true);
-      const res = await api.updateOrderStatus(orderId, "paid");
-      if (res.success) {
-        toast.success("Order ditandai sebagai sudah dibayar!");
-        setShowMarkPaidModal(false);
-        loadOrder();
-      } else {
-        toast.error(res.error?.message || "Gagal update status");
+      const res = await api.processPayment(orderId, method);
+
+      if (!res.success) {
+        toast.error(res.error?.message || "Gagal memproses pembayaran");
+        setPaymentStep("choose");
+        return;
       }
+
+      if (method === "cash") {
+        toast.success("Pembayaran cash berhasil dicatat!");
+        closePaymentModal();
+        loadOrder();
+        return;
+      }
+
+      // QRIS: buka payment link Midtrans di tab baru
+      closePaymentModal();
+      window.open(res.data.payment_link, "_blank");
     } catch {
       toast.error("Terjadi kesalahan");
+      setPaymentStep("choose");
     } finally {
       setActionLoading(false);
     }
   }
 
-  /** Tandai order sebagai selesai. Hanya bisa dipanggil setelah admin mencentang konfirmasi. */
+  // ── Actions ───────────────────────────────────────────────────────────────
+
   async function markAsCompleted() {
     try {
       setActionLoading(true);
@@ -136,7 +141,6 @@ export function useOrderDetail(orderId) {
     }
   }
 
-  /** Buka reschedule modal (order sudah lunas) dan isi form dengan jadwal saat ini. */
   function openRescheduleModal() {
     setRescheduleForm({
       service_date: order.service_date,
@@ -145,7 +149,6 @@ export function useOrderDetail(orderId) {
     setShowRescheduleModal(true);
   }
 
-  /** Simpan perubahan jadwal saja (khusus order yang sudah lunas). */
   async function handleReschedule() {
     if (!rescheduleForm.service_date || !rescheduleForm.service_start_time) {
       toast.error("Tanggal dan waktu wajib diisi");
@@ -186,7 +189,6 @@ export function useOrderDetail(orderId) {
     }
   }
 
-  /** Buka edit modal dan isi form dengan data order saat ini. */
   function openEditModal() {
     setEditForm({
       services: order.services?.map((s) => ({
@@ -202,12 +204,6 @@ export function useOrderDetail(orderId) {
     setShowEditModal(true);
   }
 
-  /**
-   * Simpan perubahan order.
-   * - Perubahan layanan/catatan → PUT /orders/:id
-   * - Perubahan jadwal → POST /orders/:id/reschedule (validasi bentrok di backend)
-   * Keduanya bisa terjadi sekaligus dalam satu save.
-   */
   async function handleEditOrder() {
     const validServices = editForm.services.filter((s) => s.service_id);
 
@@ -285,7 +281,6 @@ export function useOrderDetail(orderId) {
     }
   }
 
-  /** Batalkan order. Validasi alasan (dan refund notes jika sudah bayar) dilakukan di sini. */
   async function handleCancel() {
     if (!cancelReason.trim()) {
       toast.error("Alasan pembatalan wajib diisi");
@@ -321,18 +316,13 @@ export function useOrderDetail(orderId) {
   }
 
   // ── Computed permissions ──────────────────────────────────────────────────
-  // Edit hanya boleh selama belum lunas & belum selesai/batal
   const canEdit = order
     ? order.status !== "cancelled" && order.status !== "completed" && order.payment_status !== "paid"
-    : false;
-  // Reschedule hanya boleh saat sudah lunas, belum selesai/batal
-  const canReschedule = order
-    ? order.payment_status === "paid" && order.status !== "cancelled" && order.status !== "completed"
     : false;
   const canCancel = order
     ? order.status !== "cancelled" && order.status !== "completed"
     : false;
-  const canMarkPaid = order?.payment_status === "pending";
+  const canProcessPayment = order?.payment_status === "pending";
   const canComplete = order?.payment_status === "paid" && order?.status === "paid";
 
   return {
@@ -342,14 +332,15 @@ export function useOrderDetail(orderId) {
     services,
     loadingServices,
     // ui
-    copied,
     actionLoading,
     // modals
     showEditModal, setShowEditModal,
     showRescheduleModal, setShowRescheduleModal,
     showCancelModal, setShowCancelModal,
-    showMarkPaidModal, setShowMarkPaidModal,
+    showPaymentModal,
     showCompleteModal, setShowCompleteModal,
+    // payment
+    paymentStep, setPaymentStep,
     // form
     completeConfirmed, setCompleteConfirmed,
     cancelReason, setCancelReason,
@@ -357,8 +348,9 @@ export function useOrderDetail(orderId) {
     editForm, setEditForm,
     rescheduleForm, setRescheduleForm,
     // actions
-    copyPaymentLink,
-    markAsPaid,
+    openPaymentModal,
+    closePaymentModal,
+    processPayment,
     markAsCompleted,
     openEditModal,
     openRescheduleModal,
@@ -367,9 +359,8 @@ export function useOrderDetail(orderId) {
     handleCancel,
     // permissions
     canEdit,
-    canReschedule,
     canCancel,
-    canMarkPaid,
+    canProcessPayment,
     canComplete,
   };
 }

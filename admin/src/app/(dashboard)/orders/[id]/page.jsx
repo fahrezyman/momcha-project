@@ -7,9 +7,8 @@ import { formatCurrency, formatDate, formatTime } from "@/constants";
 import { OrderStatusBadge, PaymentStatusBadge } from "@/components/StatusBadge";
 import { InfoRow } from "@/components/ui/InfoRow";
 import { EditOrderModal } from "@/components/orders/EditOrderModal";
-import { RescheduleModal } from "@/components/orders/RescheduleModal";
 import { CancelOrderModal } from "@/components/orders/CancelOrderModal";
-import { MarkPaidModal } from "@/components/orders/MarkPaidModal";
+import { PaymentModal } from "@/components/orders/PaymentModal";
 import { CompleteOrderModal } from "@/components/orders/CompleteOrderModal";
 import { useOrderDetail } from "@/hooks/useOrderDetail";
 import { Button } from "@/components/ui/button";
@@ -17,8 +16,6 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { OrderDetailSkeleton } from "@/components/skeletons";
 import {
   ArrowLeft,
-  Copy,
-  Check,
   Calendar,
   Clock,
   User,
@@ -32,6 +29,8 @@ import {
   X,
   Edit,
   FileDown,
+  Wallet,
+  Check,
 } from "lucide-react";
 
 export default function OrderDetailPage() {
@@ -40,26 +39,24 @@ export default function OrderDetailPage() {
   const {
     order, loading,
     services, loadingServices,
-    copied, actionLoading,
+    actionLoading,
     showEditModal, setShowEditModal,
-    showRescheduleModal, setShowRescheduleModal,
     showCancelModal, setShowCancelModal,
-    showMarkPaidModal, setShowMarkPaidModal,
+    showPaymentModal,
     showCompleteModal, setShowCompleteModal,
+    paymentStep, setPaymentStep,
     completeConfirmed, setCompleteConfirmed,
     cancelReason, setCancelReason,
     refundNotes, setRefundNotes,
     editForm, setEditForm,
-    rescheduleForm, setRescheduleForm,
-    copyPaymentLink,
-    markAsPaid,
+    openPaymentModal,
+    closePaymentModal,
+    processPayment,
     markAsCompleted,
     openEditModal,
-    openRescheduleModal,
     handleEditOrder,
-    handleReschedule,
     handleCancel,
-    canEdit, canReschedule, canCancel, canMarkPaid, canComplete,
+    canEdit, canCancel, canProcessPayment, canComplete,
   } = useOrderDetail(orderId);
 
   if (loading) return <OrderDetailSkeleton />;
@@ -237,30 +234,14 @@ export default function OrderDetailPage() {
                 </p>
               </div>
 
-              {order.payment_link && (
-                <div className="space-y-2">
-                  <p className="text-xs text-momcha-text-light">Payment Link</p>
-                  <Button
-                    onClick={copyPaymentLink}
-                    className="w-full bg-momcha-coral hover:bg-momcha-brown text-white text-sm h-9"
-                  >
-                    {copied ? (
-                      <><Check size={14} className="mr-2" />Tersalin!</>
-                    ) : (
-                      <><Copy size={14} className="mr-2" />Copy Payment Link</>
-                    )}
-                  </Button>
-                </div>
-              )}
-
-              {canMarkPaid && (
+              {canProcessPayment && (
                 <Button
-                  onClick={() => setShowMarkPaidModal(true)}
+                  onClick={openPaymentModal}
                   disabled={actionLoading}
                   className="w-full bg-green-600 hover:bg-green-700 text-white text-sm h-9"
                 >
-                  <Check size={14} className="mr-2" />
-                  Tandai Sudah Bayar
+                  <Wallet size={14} className="mr-2" />
+                  Pilih Metode Pembayaran
                 </Button>
               )}
 
@@ -295,59 +276,58 @@ export default function OrderDetailPage() {
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-2">
-              <Button
-                variant="outline"
-                className="w-full justify-start text-sm h-9"
-                onClick={() => generateInvoicePDF(order).catch(console.error)}
-              >
-                <FileDown size={14} className="mr-2" />
-                Download Invoice PDF
-              </Button>
+              {order.payment_status === "paid" && (
+                <Button
+                  variant="outline"
+                  className="w-full justify-start text-sm h-9"
+                  onClick={() => generateInvoicePDF(order).catch(console.error)}
+                >
+                  <FileDown size={14} className="mr-2" />
+                  Download Invoice PDF
+                </Button>
+              )}
 
-              <Button
-                variant="outline"
-                className="w-full justify-start text-sm h-9"
-                onClick={canEdit ? openEditModal : openRescheduleModal}
-                disabled={(!canEdit && !canReschedule) || actionLoading}
-              >
-                <Edit size={14} className="mr-2" />
-                {canReschedule ? "Ubah Jadwal" : "Edit Order"}
-              </Button>
+              {canEdit && (
+                <Button
+                  variant="outline"
+                  className="w-full justify-start text-sm h-9"
+                  onClick={openEditModal}
+                  disabled={actionLoading}
+                >
+                  <Edit size={14} className="mr-2" />
+                  Edit Order
+                </Button>
+              )}
 
-              <Button
-                variant="outline"
-                className="w-full justify-start text-sm h-9"
-                onClick={() => setShowCompleteModal(true)}
-                disabled={!canComplete || actionLoading}
-              >
-                <Check size={14} className="mr-2" />
-                Tandai Selesai
-              </Button>
+              {canComplete && (
+                <Button
+                  variant="outline"
+                  className="w-full justify-start text-sm h-9"
+                  onClick={() => setShowCompleteModal(true)}
+                  disabled={actionLoading}
+                >
+                  <Check size={14} className="mr-2" />
+                  Tandai Selesai
+                </Button>
+              )}
 
-              <Button
-                variant="outline"
-                className="w-full justify-start text-red-600 hover:bg-red-50 hover:text-red-700 text-sm h-9"
-                onClick={() => setShowCancelModal(true)}
-                disabled={!canCancel || actionLoading}
-              >
-                <X size={14} className="mr-2" />
-                Cancel Order
-              </Button>
+              {canCancel && (
+                <Button
+                  variant="outline"
+                  className="w-full justify-start text-red-600 hover:bg-red-50 hover:text-red-700 text-sm h-9"
+                  onClick={() => setShowCancelModal(true)}
+                  disabled={actionLoading}
+                >
+                  <X size={14} className="mr-2" />
+                  Cancel Order
+                </Button>
+              )}
             </CardContent>
           </Card>
         </div>
       </div>
 
       {/* Modals */}
-      <RescheduleModal
-        open={showRescheduleModal}
-        onClose={() => setShowRescheduleModal(false)}
-        onSave={handleReschedule}
-        form={rescheduleForm}
-        onFormChange={setRescheduleForm}
-        loading={actionLoading}
-      />
-
       <EditOrderModal
         open={showEditModal}
         onClose={() => setShowEditModal(false)}
@@ -359,11 +339,16 @@ export default function OrderDetailPage() {
         loading={actionLoading}
       />
 
-      <MarkPaidModal
-        open={showMarkPaidModal}
-        onClose={() => setShowMarkPaidModal(false)}
-        onConfirm={markAsPaid}
+      <PaymentModal
+        open={showPaymentModal}
+        onClose={closePaymentModal}
         order={order}
+        paymentStep={paymentStep}
+        onSelectMethod={(method) => {
+          setPaymentStep(method);
+          if (method === "qris") processPayment("qris");
+        }}
+        onConfirmCash={() => processPayment("cash")}
         loading={actionLoading}
       />
 

@@ -2,6 +2,7 @@ const logger = require("../utils/logger");
 const db = require("../config/db");
 const { generateOrderNumber } = require("../utils/generateOrderNumbers");
 const { createTransaction } = require("../utils/midtrans");
+const { generateInvoiceNumber } = require("../utils/generateInvoiceNumbers");
 const { paginate } = require("../utils/pagination");
 
 function buildOrderFilters({ status, payment_status, date_from, date_to, customer_id }) {
@@ -384,30 +385,7 @@ async function createOrder(req, res) {
     // Generate order number
     const order_number = await generateOrderNumber();
 
-    // Create Midtrans transaction
-    let payment_link = null;
-    let qr_code_url = null;
-    let thirdparty_transaction_id = null;
-
-    try {
-      const midtransResult = await createTransaction({
-        order_number,
-        amount: total_amount,
-        customer_name,
-        customer_email,
-        customer_phone,
-        service_name: serviceDetails.map((s) => s.service_name).join(", "),
-      });
-
-      payment_link = midtransResult.redirect_url;
-      qr_code_url = midtransResult.qr_code_url;
-      thirdparty_transaction_id = midtransResult.token;
-    } catch (midtransError) {
-      logger.error("Midtrans error:", midtransError);
-      console.error("Midtrans error:", midtransError);
-    }
-
-    // Create order
+    // Create order (payment collected after service is done)
     const [orderResult] = await db.query(
       `
       INSERT INTO orders (
@@ -419,11 +397,8 @@ async function createOrder(req, res) {
         total_duration_minutes,
         notes,
         payment_status,
-        payment_method,
-        payment_link,
-        thirdparty_transaction_id,
         status
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, 'pending', 'qris', ?, ?, 'pending_payment')
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, 'pending', 'pending_payment')
     `,
       [
         order_number,
@@ -433,8 +408,6 @@ async function createOrder(req, res) {
         total_amount,
         total_duration,
         notes || null,
-        payment_link,
-        thirdparty_transaction_id,
       ],
     );
 
@@ -474,8 +447,6 @@ async function createOrder(req, res) {
         services: serviceDetails,
         total_amount,
         total_duration,
-        payment_link,
-        qr_code_url,
       },
     });
   } catch (error) {
@@ -562,28 +533,6 @@ async function updateOrder(req, res) {
         "UPDATE orders SET total_amount = ?, total_duration_minutes = ? WHERE id = ?",
         [total_amount, total_duration, id],
       );
-
-      // Regenerate payment link if pending
-      if (order.payment_status === "pending") {
-        try {
-          const midtransResult = await createTransaction({
-            order_number: order.order_number,
-            amount: total_amount,
-            customer_name: order.customer_name,
-            customer_email: order.customer_email,
-            customer_phone: order.customer_phone,
-            service_name: serviceDetails.map((s) => s.service_name).join(", "),
-          });
-
-          await db.query(
-            "UPDATE orders SET payment_link = ?, thirdparty_transaction_id = ? WHERE id = ?",
-            [midtransResult.redirect_url, midtransResult.token, id],
-          );
-        } catch (midtransError) {
-          logger.error("Midtrans error:", midtransError);
-          console.error("Midtrans error:", midtransError);
-        }
-      }
     }
 
     // Update notes
@@ -844,6 +793,105 @@ async function cancelOrder(req, res) {
   }
 }
 
+// Process payment after service is done — cash (immediate) or QRIS (generate QR)
+async function processPayment(req, res) {
+  try {
+    const { id } = req.params;
+    const { payment_method } = req.body;
+
+    if (!["cash", "qris"].includes(payment_method)) {
+      return res.status(400).json({
+        success: false,
+        error: { code: "VALIDATION_ERROR", message: "payment_method harus 'cash' atau 'qris'" },
+      });
+    }
+
+    const [orders] = await db.query(
+      `SELECT o.*, c.name as customer_name, c.email as customer_email, c.phone as customer_phone
+       FROM orders o JOIN customers c ON o.customer_id = c.id
+       WHERE o.id = ?`,
+      [id],
+    );
+
+    if (orders.length === 0) {
+      return res.status(404).json({
+        success: false,
+        error: { code: "NOT_FOUND", message: "Order tidak ditemukan" },
+      });
+    }
+
+    const order = orders[0];
+
+    if (order.payment_status === "paid") {
+      return res.status(400).json({
+        success: false,
+        error: { code: "ALREADY_PAID", message: "Order sudah lunas" },
+      });
+    }
+
+    if (order.status === "cancelled" || order.status === "completed") {
+      return res.status(400).json({
+        success: false,
+        error: { code: "INVALID_STATUS", message: "Order tidak dapat diproses pembayarannya" },
+      });
+    }
+
+    if (payment_method === "cash") {
+      const invoice_number = await generateInvoiceNumber();
+      await db.query(
+        `UPDATE orders SET payment_method = 'cash', payment_status = 'paid', status = 'paid',
+         paid_at = NOW(), invoice_number = ? WHERE id = ?`,
+        [invoice_number, id],
+      );
+      return res.json({ success: true, data: { payment_method: "cash" } });
+    }
+
+    // QRIS: reuse payment link jika sudah pernah di-generate dan masih pending
+    if (order.payment_method === "qris" && order.payment_link) {
+      return res.json({
+        success: true,
+        data: { payment_method: "qris", payment_link: order.payment_link },
+      });
+    }
+
+    // QRIS: generate Snap transaction
+    const [serviceRows] = await db.query(
+      `SELECT GROUP_CONCAT(service_name SEPARATOR ', ') as names FROM order_services WHERE order_id = ?`,
+      [id],
+    );
+    const service_name = serviceRows[0]?.names || "Layanan Momcha";
+
+    const snapResult = await createTransaction({
+      order_number: order.order_number,
+      amount: order.total_amount,
+      customer_name: order.customer_name,
+      customer_email: order.customer_email,
+      customer_phone: order.customer_phone,
+      service_name,
+    });
+
+    await db.query(
+      `UPDATE orders SET payment_method = 'qris', payment_link = ?, thirdparty_transaction_id = ? WHERE id = ?`,
+      [snapResult.redirect_url, snapResult.token, id],
+    );
+
+    return res.json({
+      success: true,
+      data: {
+        payment_method: "qris",
+        payment_link: snapResult.redirect_url,
+      },
+    });
+  } catch (error) {
+    logger.error("Process payment error:", error);
+    console.error("Process payment error:", error);
+    res.status(500).json({
+      success: false,
+      error: { code: "SERVER_ERROR", message: "Internal server error" },
+    });
+  }
+}
+
 module.exports = {
   getAllOrders,
   getOrderById,
@@ -853,4 +901,5 @@ module.exports = {
   rescheduleOrder,
   updateOrderStatus,
   cancelOrder,
+  processPayment,
 };
