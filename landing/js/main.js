@@ -126,15 +126,26 @@ function setServicesState(state) {
   carouselWrapper.style.display = state === "done" ? "block" : "none";
 }
 
-function formatPrice(price) {
-  return new Intl.NumberFormat("id-ID", { style: "currency", currency: "IDR", minimumFractionDigits: 0 }).format(price);
-}
-
 function formatDuration(minutes) {
   if (minutes < 60) return `${minutes} menit`;
   const hours = Math.floor(minutes / 60);
   const mins = minutes % 60;
   return mins > 0 ? `${hours}j ${mins}m` : `${hours} jam`;
+}
+
+const CATEGORY_RULES = [
+  { label: "Pijat", keywords: ["pijat", "massage"] },
+  { label: "Perawatan Bayi", keywords: ["bayi", "baby", "mandi", "jaga"] },
+  { label: "Konsultasi", keywords: ["konsultasi", "konseling"] },
+  { label: "Laktasi & ASI", keywords: ["laktasi", "asi", "menyusui"] },
+];
+
+function getServiceCategory(name) {
+  const n = name.toLowerCase();
+  for (const rule of CATEGORY_RULES) {
+    if (rule.keywords.some((kw) => n.includes(kw))) return rule.label;
+  }
+  return "Lainnya";
 }
 
 function getServiceIcon(name) {
@@ -146,7 +157,7 @@ function getServiceIcon(name) {
   return "🍼";
 }
 
-function createServiceCard({ name, description, price, duration_minutes }) {
+function createServiceCard({ name, description, duration_minutes }) {
   const card = document.createElement("div");
   card.className = "service-card";
   card.innerHTML = `
@@ -154,7 +165,6 @@ function createServiceCard({ name, description, price, duration_minutes }) {
     <h3>${name}</h3>
     <p>${description || "Layanan perawatan profesional untuk ibu dan bayi"}</p>
     <div class="service-info">
-      <span class="service-price">${formatPrice(price)}</span>
       <span class="service-duration">
         <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
           <circle cx="12" cy="12" r="10"></circle>
@@ -167,6 +177,38 @@ function createServiceCard({ name, description, price, duration_minutes }) {
   return card;
 }
 
+let allServices = [];
+
+function renderServices(services) {
+  servicesContainer.innerHTML = "";
+  services.forEach((service) => servicesContainer.appendChild(createServiceCard(service)));
+  servicesContainer.scrollTo({ left: 0, behavior: "instant" });
+  initCarousel(services.length);
+}
+
+function buildFilterTabs(services) {
+  const filtersEl = document.getElementById("service-filters");
+  if (!filtersEl) return;
+
+  const categories = [...new Set(services.map((s) => getServiceCategory(s.name)))];
+
+  filtersEl.innerHTML = "";
+
+  const tabs = ["Semua", ...categories];
+  tabs.forEach((label, i) => {
+    const btn = document.createElement("button");
+    btn.className = "filter-tab" + (i === 0 ? " active" : "");
+    btn.textContent = label;
+    btn.addEventListener("click", () => {
+      filtersEl.querySelectorAll(".filter-tab").forEach((t) => t.classList.remove("active"));
+      btn.classList.add("active");
+      const filtered = label === "Semua" ? allServices : allServices.filter((s) => getServiceCategory(s.name) === label);
+      renderServices(filtered);
+    });
+    filtersEl.appendChild(btn);
+  });
+}
+
 async function fetchServices() {
   setServicesState("loading");
   try {
@@ -174,10 +216,10 @@ async function fetchServices() {
     if (!response.ok) throw new Error("Failed to fetch services");
     const { success, data } = await response.json();
     if (!success || !data?.length) throw new Error("No services found");
-    servicesContainer.innerHTML = "";
-    data.forEach((service) => servicesContainer.appendChild(createServiceCard(service)));
+    allServices = data;
+    buildFilterTabs(data);
+    renderServices(data);
     setServicesState("done");
-    initCarousel(data.length);
   } catch (error) {
     console.error("Error fetching services:", error);
     setServicesState("error");

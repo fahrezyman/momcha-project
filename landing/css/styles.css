@@ -754,16 +754,9 @@ ul {
 .service-info {
   display: flex;
   align-items: center;
-  justify-content: space-between;
+  justify-content: flex-start;
   padding-top: 1rem;
   border-top: 1px solid var(--border);
-}
-
-.service-price {
-  font-family: var(--font);
-  font-size: 1.2rem;
-  font-weight: 700;
-  color: var(--coral);
 }
 
 .service-duration {
@@ -782,6 +775,39 @@ ul {
   text-align: center;
   color: var(--coral);
   padding: 2rem 0;
+}
+
+/* ========== SERVICE FILTERS ========== */
+.service-filters {
+  display: flex;
+  gap: 0.5rem;
+  justify-content: center;
+  flex-wrap: wrap;
+  margin-bottom: 2rem;
+}
+
+.filter-tab {
+  padding: 0.45rem 1.2rem;
+  border-radius: var(--r-full);
+  border: 1.5px solid var(--border);
+  background: transparent;
+  color: var(--text-secondary);
+  font-size: 0.875rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: var(--transition);
+  font-family: var(--font);
+}
+
+.filter-tab:hover {
+  border-color: var(--coral);
+  color: var(--coral);
+}
+
+.filter-tab.active {
+  background: var(--coral);
+  border-color: var(--coral);
+  color: var(--white);
 }
 
 /* ========== ABOUT SECTION ========== */
